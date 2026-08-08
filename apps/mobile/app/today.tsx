@@ -1,14 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, Share, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Countdown } from '../components/Countdown';
+import { HowItWorks } from '../components/HowItWorks';
+import { MeetFeedbackCard } from '../components/MeetFeedback';
 import { Orb } from '../components/Orb';
 import { Starfield } from '../components/Starfield';
 import { Ticket } from '../components/Ticket';
+import { WaxSeal } from '../components/WaxSeal';
 import { Body, Button, Card, Label, Poetic, Screen, Small, Title } from '../components/ui';
-import { getCurrentMatch, respondToMatch } from '../lib/api';
+import { getCurrentMatch, getPendingFeedback, respondToMatch } from '../lib/api';
+import * as dialog from '../lib/dialog';
 import { refreshLocation } from '../lib/location';
 import { registerPushToken } from '../lib/push';
 import { colors, fonts, spacing } from '../lib/theme';
@@ -54,6 +58,24 @@ function timeRange(startIso: string, endIso: string): string {
   return `${t(new Date(startIso))} – ${t(new Date(endIso))}`;
 }
 
+async function sharePlans(match: CurrentMatch) {
+  const text = `Heads up — I'm meeting a MeetCute match at ${match.venue!.name} (${match.venue!.address}) on ${dayLabel(match.window_start!)}, ${timeRange(match.window_start!, match.window_end!)}. If you don't hear from me after, check in?`;
+  try {
+    if (Platform.OS === 'web') {
+      if (navigator.share) {
+        await navigator.share({ text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        dialog.alert('Copied', 'Your plans were copied — paste them to a friend.');
+      }
+    } else {
+      await Share.share({ message: text });
+    }
+  } catch {
+    // user cancelled the share sheet
+  }
+}
+
 export default function Today() {
   const qc = useQueryClient();
   const matchQuery = useQuery({
@@ -63,16 +85,30 @@ export default function Today() {
   });
   const match = matchQuery.data ?? null;
 
+  const feedbackQuery = useQuery({
+    queryKey: ['pendingFeedback'],
+    queryFn: getPendingFeedback,
+    enabled: !matchQuery.isLoading && !match,
+  });
+  const pendingFeedback = (!match && feedbackQuery.data) || null;
+
   const prev = useRef<CurrentMatch | null>(null);
   const [justEnded, setJustEnded] = useState(false);
   useEffect(() => {
-    if (prev.current?.status === 'committed' && match === null) setJustEnded(true);
+    if (prev.current?.status === 'committed' && match === null) {
+      setJustEnded(true);
+      qc.invalidateQueries({ queryKey: ['pendingFeedback'] });
+    }
     if (match) setJustEnded(false);
     prev.current = match;
-  }, [match]);
+  }, [match, qc]);
 
+  // The seal is per-match: a new match arrives sealed.
+  const [brokenSealFor, setBrokenSealFor] = useState<string | null>(null);
+
+  const [located, setLocated] = useState<boolean | null>(null);
   useEffect(() => {
-    refreshLocation();
+    refreshLocation().then(setLocated);
     registerPushToken();
   }, []);
 
@@ -80,22 +116,20 @@ export default function Today() {
     mutationFn: ({ action }: { action: 'accept' | 'decline' }) =>
       respondToMatch(match!.match_id, action),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['currentMatch'] }),
-    onError: (err) => Alert.alert('Hmm', err instanceof Error ? err.message : String(err)),
+    onError: (err) => {
+      dialog.alert('Hmm', err instanceof Error ? err.message : String(err));
+      qc.invalidateQueries({ queryKey: ['currentMatch'] });
+    },
   });
 
-  function confirmDecline() {
-    Alert.alert(
+  async function confirmDecline() {
+    const ok = await dialog.confirm(
       'Let this one go?',
       'This match never comes back, and tomorrow is tomorrow.',
-      [
-        { text: 'Keep it', style: 'cancel' },
-        {
-          text: 'Let it go',
-          style: 'destructive',
-          onPress: () => respond.mutate({ action: 'decline' }),
-        },
-      ],
+      'Let it go',
+      true,
     );
+    if (ok) respond.mutate({ action: 'decline' });
   }
 
   const refetch = () => qc.invalidateQueries({ queryKey: ['currentMatch'] });
@@ -110,33 +144,53 @@ export default function Today() {
     );
   } else if (!match) {
     scene = (
-      <Animated.View entering={FadeIn.duration(800)} style={{ alignItems: 'center' }}>
-        <Orb size={110} />
+      <Animated.View entering={FadeIn.duration(800)}>
+        {pendingFeedback ? (
+          <View style={{ marginBottom: spacing.lg }}>
+            <MeetFeedbackCard feedback={pendingFeedback} />
+          </View>
+        ) : null}
+        <HowItWorks />
+        <View style={{ alignItems: 'center' }}>
+          <Orb size={pendingFeedback ? 70 : 110} />
+          <View style={{ height: spacing.lg }} />
+          {justEnded && !pendingFeedback ? (
+            <>
+              <Title style={{ textAlign: 'center' }}>The rest is offline.</Title>
+              <Poetic style={{ textAlign: 'center', marginTop: spacing.sm, maxWidth: 300 }}>
+                Your match has faded from here forever. If you found each other,
+                the story is yours now — not ours.
+              </Poetic>
+            </>
+          ) : (
+            <>
+              <Title style={{ textAlign: 'center' }}>Nothing yet.</Title>
+              <Poetic style={{ textAlign: 'center', marginTop: spacing.sm, maxWidth: 300 }}>
+                Once a day, someone nearby is chosen for you. No browsing, no
+                swiping — you'll simply know.
+              </Poetic>
+              <View style={{ height: spacing.md }} />
+              <Small>The city is full of strangers. One of them is tomorrow's.</Small>
+            </>
+          )}
+        </View>
+      </Animated.View>
+    );
+  } else if (match.status === 'pending' && !match.you_accepted && brokenSealFor !== match.match_id) {
+    scene = (
+      <Animated.View entering={FadeIn.duration(700)} style={{ alignItems: 'center' }}>
+        <Label style={{ color: colors.rose }}>Today's match</Label>
+        <View style={{ height: spacing.sm }} />
+        <Title style={{ textAlign: 'center' }}>A letter arrived.</Title>
         <View style={{ height: spacing.lg }} />
-        {justEnded ? (
-          <>
-            <Title style={{ textAlign: 'center' }}>The rest is offline.</Title>
-            <Poetic style={{ textAlign: 'center', marginTop: spacing.sm, maxWidth: 300 }}>
-              Your match has faded from here forever. If you found each other,
-              the story is yours now — not ours.
-            </Poetic>
-          </>
-        ) : (
-          <>
-            <Title style={{ textAlign: 'center' }}>Nothing yet.</Title>
-            <Poetic style={{ textAlign: 'center', marginTop: spacing.sm, maxWidth: 300 }}>
-              Once a day, someone nearby is chosen for you. No browsing, no
-              swiping — you'll simply know.
-            </Poetic>
-            <View style={{ height: spacing.md }} />
-            <Small>The city is full of strangers. One of them is tomorrow's.</Small>
-          </>
-        )}
+        <WaxSeal onBreak={() => setBrokenSealFor(match.match_id)} />
+        <View style={{ height: spacing.lg }} />
+        <Countdown until={match.accept_deadline} label="before it fades" onDone={refetch} />
       </Animated.View>
     );
   } else if (match.status === 'pending' && !match.you_accepted) {
     scene = (
-      <Animated.View entering={FadeInUp.duration(600)}>
+      <Animated.View entering={FadeInUp.duration(500)}>
         <Card
           style={{
             borderColor: colors.rose,
@@ -228,15 +282,18 @@ export default function Today() {
           <Small>
             When the window closes, this match disappears for good. If you find
             each other — names, numbers, the rest — that's yours to trade in
-            person. Meet in the open, and tell a friend where you'll be.
+            person.
           </Small>
         </Card>
 
-        <Button
-          title="Open in Maps"
-          variant="ghost"
-          onPress={() => Linking.openURL(match.venue!.maps_url)}
-        />
+        <View style={{ gap: spacing.sm }}>
+          <Button
+            title="Open in Maps"
+            variant="ghost"
+            onPress={() => Linking.openURL(match.venue!.maps_url)}
+          />
+          <Button title="Share plans with a friend" variant="quiet" onPress={() => sharePlans(match)} />
+        </View>
       </Animated.View>
     );
   } else {
@@ -251,6 +308,25 @@ export default function Today() {
     <Screen>
       <Starfield count={18} />
       <Header />
+      {located === false && (
+        <Pressable
+          onPress={() => refreshLocation().then(setLocated)}
+          style={{
+            marginHorizontal: spacing.lg,
+            marginBottom: spacing.sm,
+            backgroundColor: colors.surfaceRaised,
+            borderColor: colors.amber,
+            borderWidth: 1,
+            borderRadius: 14,
+            padding: spacing.md,
+          }}
+        >
+          <Small style={{ color: colors.amber }}>
+            The city can't find you — matching is paused until location is on.
+            Tap to try again.
+          </Small>
+        </Pressable>
+      )}
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{

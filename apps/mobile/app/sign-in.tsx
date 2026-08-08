@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
+import * as dialog from '../lib/dialog';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Starfield } from '../components/Starfield';
 import { Body, Button, Input, Label, Poetic, Screen } from '../components/ui';
@@ -20,7 +21,7 @@ export default function SignIn() {
       options: { shouldCreateUser: true },
     });
     setBusy(false);
-    if (error) return Alert.alert('Hmm', error.message);
+    if (error) return dialog.alert('Hmm', error.message);
     setStage('code');
   }
 
@@ -32,7 +33,7 @@ export default function SignIn() {
       type: 'email',
     });
     setBusy(false);
-    if (error) return Alert.alert('Hmm', error.message);
+    if (error) return dialog.alert('Hmm', error.message);
     router.replace('/');
   }
 
@@ -99,7 +100,10 @@ export default function SignIn() {
               style={{ letterSpacing: 12, textAlign: 'center', fontSize: 22 }}
             />
             <Button title="Step inside" onPress={verify} loading={busy} disabled={code.length !== 6} />
-            <Button title="Use a different email" variant="quiet" onPress={() => setStage('email')} />
+            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: spacing.lg }}>
+              <Button title="Resend code" variant="quiet" onPress={sendCode} />
+              <Button title="Different email" variant="quiet" onPress={() => setStage('email')} />
+            </View>
           </Animated.View>
         )}
       </KeyboardAvoidingView>

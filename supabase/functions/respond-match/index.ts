@@ -52,17 +52,21 @@ Deno.serve(async (req) => {
     (match.status === 'accepted_a' && isA) || (match.status === 'accepted_b' && !isA);
   if (alreadyAcceptedByMe) return json({ status: 'waiting' });
 
-  const otherAccepted =
+  let otherAccepted =
     (match.status === 'accepted_a' && !isA) || (match.status === 'accepted_b' && isA);
 
   if (!otherAccepted) {
-    const { error } = await db
+    // Guarded first-accept: if 0 rows update, the other user accepted in the
+    // meantime (race) - fall through to the commit path instead.
+    const { data: updated, error } = await db
       .from('matches')
       .update({ status: isA ? 'accepted_a' : 'accepted_b' })
       .eq('id', match.id)
-      .eq('status', 'pending');
+      .eq('status', 'pending')
+      .select('id');
     if (error) return json({ error: error.message }, 500);
-    return json({ status: 'waiting' });
+    if (updated && updated.length > 0) return json({ status: 'waiting' });
+    otherAccepted = true;
   }
 
   // Both accepted: commit. Pick the venue near their midpoint & set the window.
@@ -79,7 +83,9 @@ Deno.serve(async (req) => {
   const tz = Deno.env.get('MEETCUTE_TZ') ?? 'Asia/Kolkata';
   const window = nextEveningWindow(tz);
 
-  const { error: uErr } = await db
+  // Commit exactly once: only the transition from the other-accepted state
+  // wins; a racing second committer matches 0 rows and returns quietly.
+  const { data: committed, error: uErr } = await db
     .from('matches')
     .update({
       status: 'committed',
@@ -92,8 +98,10 @@ Deno.serve(async (req) => {
       window_end: window.end.toISOString(),
     })
     .eq('id', match.id)
-    .in('status', ['accepted_a', 'accepted_b']);
+    .eq('status', isA ? 'accepted_b' : 'accepted_a')
+    .select('id');
   if (uErr) return json({ error: uErr.message }, 500);
+  if (!committed || committed.length === 0) return json({ status: 'committed' });
 
   const timeLabel = window.start.toLocaleString('en-US', {
     timeZone: tz,

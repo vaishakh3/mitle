@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import {
   Body,
   Button,
@@ -25,6 +25,7 @@ import {
   upsertPreferences,
   upsertProfile,
 } from '../lib/api';
+import * as dialog from '../lib/dialog';
 import { supabase } from '../lib/supabase';
 import { colors, fonts, spacing } from '../lib/theme';
 import type { Gender } from '../lib/types';
@@ -48,7 +49,12 @@ export default function Settings() {
   const [paused, setPaused] = useState(false);
   const [interestedIn, setInterestedIn] = useState<Gender[]>([]);
   const [radius, setRadius] = useState(10);
+  const [ageMin, setAgeMin] = useState('21');
+  const [ageMax, setAgeMax] = useState('35');
   const [picked, setPicked] = useState<number[]>([]);
+
+  const agesValid =
+    Number(ageMin) >= 18 && Number(ageMax) <= 99 && Number(ageMax) >= Number(ageMin);
 
   useEffect(() => {
     if (profileQ.data) {
@@ -60,6 +66,8 @@ export default function Settings() {
     if (prefsQ.data) {
       setInterestedIn(prefsQ.data.interested_genders);
       setRadius(prefsQ.data.radius_km);
+      setAgeMin(String(prefsQ.data.age_min));
+      setAgeMax(String(prefsQ.data.age_max));
     }
   }, [prefsQ.data]);
   useEffect(() => {
@@ -69,36 +77,35 @@ export default function Settings() {
   const save = useMutation({
     mutationFn: async () => {
       await upsertProfile({ spot_hint: hint.trim(), is_paused: paused });
-      await upsertPreferences({ interested_genders: interestedIn, radius_km: radius });
+      await upsertPreferences({
+        interested_genders: interestedIn,
+        radius_km: radius,
+        age_min: Number(ageMin),
+        age_max: Number(ageMax),
+      });
       await setMyInterests(picked);
     },
     onSuccess: () => {
       qc.invalidateQueries();
-      Alert.alert('Saved', 'Changes apply from the next daily match.');
+      dialog.alert('Saved', 'Changes apply from the next daily match.');
     },
-    onError: (err) => Alert.alert('Hmm', err instanceof Error ? err.message : String(err)),
+    onError: (err) => dialog.alert('Hmm', err instanceof Error ? err.message : String(err)),
   });
 
-  function confirmDelete() {
-    Alert.alert(
+  async function confirmDelete() {
+    const ok = await dialog.confirm(
       'Delete your account?',
       'Profile, preferences, any active match — gone. No undo.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete forever',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteAccount();
-              router.replace('/sign-in');
-            } catch (err) {
-              Alert.alert('Hmm', err instanceof Error ? err.message : String(err));
-            }
-          },
-        },
-      ],
+      'Delete forever',
+      true,
     );
+    if (!ok) return;
+    try {
+      await deleteAccount();
+      router.replace('/sign-in');
+    } catch (err) {
+      dialog.alert('Hmm', err instanceof Error ? err.message : String(err));
+    }
   }
 
   return (
@@ -173,6 +180,29 @@ export default function Settings() {
             ))}
           </ChipRow>
           <Divider />
+          <Label>Between the ages of</Label>
+          <View style={{ height: spacing.sm }} />
+          <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
+            <Input
+              style={{ flex: 1, textAlign: 'center' }}
+              keyboardType="number-pad"
+              maxLength={2}
+              value={ageMin}
+              onChangeText={setAgeMin}
+            />
+            <Small>and</Small>
+            <Input
+              style={{ flex: 1, textAlign: 'center' }}
+              keyboardType="number-pad"
+              maxLength={2}
+              value={ageMax}
+              onChangeText={setAgeMax}
+            />
+          </View>
+          {!agesValid && (
+            <Small style={{ color: colors.danger, marginTop: spacing.xs }}>18+, and in order.</Small>
+          )}
+          <Divider />
           <Label>Within</Label>
           <View style={{ height: spacing.sm }} />
           <ChipRow>
@@ -205,7 +235,12 @@ export default function Settings() {
           </ChipRow>
         </Card>
 
-        <Button title="Save changes" onPress={() => save.mutate()} loading={save.isPending} />
+        <Button
+          title="Save changes"
+          onPress={() => save.mutate()}
+          loading={save.isPending}
+          disabled={!agesValid || interestedIn.length === 0}
+        />
         <Button
           title="Sign out"
           variant="ghost"

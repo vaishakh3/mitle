@@ -21,13 +21,19 @@ picks a cafe + 1-hour window, match self-destructs when the window ends.
 
 ## Invariants (do not break)
 
-- Clients must never be able to read the other user's identity: `matches` and
-  `match_history` have deny-all RLS; all match reads go through the
-  `get_current_match()` RPC which redacts identity.
+- Clients must never be able to read the other user's identity: `matches`,
+  `match_history`, and `meet_feedback` have deny-all RLS; all match reads go
+  through SECURITY DEFINER RPCs (`get_current_match`, `get_pending_feedback`,
+  `submit_meet_feedback`) which redact identity.
 - One non-terminal match per user (partial unique indexes on `matches`).
 - Pairs are never re-matched (checked against `match_history` in the matcher).
 - Terminal matches are deleted from `matches` and archived to `match_history`
-  (pair + outcome only).
+  (pair + outcome only). `get_current_match` also hides committed matches the
+  moment `window_end` passes, before the cron sweeps them.
+- `respond-match` uses guarded status-transition updates (`.eq('status', ...)
+  .select()`) so racing accepts commit exactly once — keep that pattern.
+- Use `lib/dialog.ts` instead of React Native `Alert` (Alert is a no-op on
+  react-native-web).
 
 ## Verification
 

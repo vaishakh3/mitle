@@ -13,8 +13,14 @@ function check(name, cond, extra = '') {
   if (!cond) failures++;
 }
 
-// --- find a pending match created by daily-match
-const { data: matches } = await admin.from('matches').select('*').eq('status', 'pending');
+// --- find a pending match created by daily-match (seed users only: real
+// accounts sign in via OTP and have no test password)
+const { data: usersAll } = await admin.auth.admin.listUsers({ perPage: 1000 });
+const seedIds = new Set(
+  usersAll.users.filter((u) => u.email?.endsWith('@test.dev')).map((u) => u.id),
+);
+const { data: allPending } = await admin.from('matches').select('*').eq('status', 'pending');
+const matches = (allPending ?? []).filter((m) => seedIds.has(m.user_a) && seedIds.has(m.user_b));
 check('daily-match created pending matches', matches.length > 0, `${matches.length} pending`);
 const m = matches[0];
 
@@ -25,7 +31,7 @@ const { data: profs } = await admin
 const profA = profs.find((p) => p.user_id === m.user_a);
 const profB = profs.find((p) => p.user_id === m.user_b);
 
-const { data: users } = await admin.auth.admin.listUsers({ perPage: 1000 });
+const users = usersAll;
 const emailOf = (id) => users.users.find((u) => u.id === id)?.email;
 
 async function signIn(userId) {
@@ -110,6 +116,8 @@ await admin
     window_end: new Date(Date.now() - 3600e3).toISOString(),
   })
   .eq('id', m.id);
+const { data: cmPastWindow } = await a.client.rpc('get_current_match');
+check('RPC hides committed match once window ends (pre-sweep)', cmPastWindow === null);
 const sweep = await fetch(`${url}/functions/v1/expire-matches`, {
   method: 'POST',
   headers: { Authorization: `Bearer ${anonKey}` },
@@ -124,8 +132,31 @@ check('match archived to history as completed', hist.length === 1 && hist[0].out
 const { data: cmA3 } = await a.client.rpc('get_current_match');
 check('RPC returns null after deletion', cmA3 === null);
 
+// --- feedback flow on the completed match
+const { data: fbA } = await a.client.rpc('get_pending_feedback');
+check('pending feedback offered after completion', fbA?.history_id === hist[0].id);
+const { error: fbErr } = await a.client.rpc('submit_meet_feedback', {
+  p_history_id: fbA.history_id,
+  p_outcome: 'met',
+  p_report_reason: null,
+});
+check('feedback submits without error', !fbErr, fbErr?.message);
+const { data: fbA2 } = await a.client.rpc('get_pending_feedback');
+check('feedback prompt clears after submit', fbA2 === null);
+const { data: fbRows } = await admin.from('meet_feedback').select('*').eq('history_id', fbA.history_id);
+check('feedback row recorded', fbRows.length === 1 && fbRows[0].outcome === 'met');
+const { error: fbOtherErr } = await b.client.rpc('submit_meet_feedback', {
+  p_history_id: fbA.history_id,
+  p_outcome: 'no_show',
+  p_report_reason: 'test report',
+});
+check('other side can report via feedback', !fbOtherErr);
+const { data: repRows } = await admin.from('reports').select('*').eq('match_history_id', fbA.history_id);
+check('report row recorded', repRows.length === 1);
+
 // --- decline flow on a second pending match
-const { data: rest } = await admin.from('matches').select('*').eq('status', 'pending');
+const { data: restAll } = await admin.from('matches').select('*').eq('status', 'pending');
+const rest = (restAll ?? []).filter((x) => seedIds.has(x.user_a) && seedIds.has(x.user_b));
 if (rest.length > 0) {
   const m2 = rest[0];
   const c = await signIn(m2.user_a);
@@ -142,7 +173,8 @@ if (rest.length > 0) {
 }
 
 // --- non-participant cannot respond to someone else's match
-const { data: rest2 } = await admin.from('matches').select('*').eq('status', 'pending');
+const { data: rest2All } = await admin.from('matches').select('*').eq('status', 'pending');
+const rest2 = (rest2All ?? []).filter((x) => seedIds.has(x.user_a) && seedIds.has(x.user_b));
 if (rest2.length > 0) {
   const m3 = rest2[0];
   const outsiderId = users.users.find(

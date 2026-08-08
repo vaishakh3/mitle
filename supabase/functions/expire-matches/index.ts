@@ -1,6 +1,7 @@
-// Housekeeping (cron, hourly):
+// Housekeeping (cron, every ~15 min):
 //  1. Pending matches past their accept deadline -> archived as 'expired'
 //  2. Committed matches past their meet window   -> archived as 'completed'
+//  3. Committed matches whose window opens within ~35 min -> reminder push
 // Archived matches are DELETED from `matches` (the user-facing store); only
 // the pair + outcome survive in `match_history` for re-match prevention and
 // trust & safety.
@@ -71,5 +72,38 @@ Deno.serve(async (req) => {
     );
   }
 
-  return json({ expired: stale?.length ?? 0, completed: done?.length ?? 0 });
+  // The no-show killer: nudge both people shortly before the window opens.
+  const soonCutoff = new Date(Date.now() + 35 * 60000).toISOString();
+  const { data: soon, error: rErr } = await db
+    .from('matches')
+    .select('id, user_a, user_b, venue_name, window_start')
+    .eq('status', 'committed')
+    .eq('reminder_sent', false)
+    .gt('window_start', now)
+    .lt('window_start', soonCutoff);
+  if (rErr) return json({ error: rErr.message }, 500);
+
+  for (const m of soon ?? []) {
+    await db.from('matches').update({ reminder_sent: true }).eq('id', m.id);
+    const { data: people } = await db
+      .from('profiles')
+      .select('expo_push_token')
+      .in('user_id', [m.user_a, m.user_b]);
+    await sendPush(
+      (people ?? [])
+        .map((p) => p.expo_push_token)
+        .filter((t): t is string => !!t)
+        .map((to) => ({
+          to,
+          title: 'Almost time',
+          body: `${m.venue_name ?? 'Your spot'} — the window opens soon. Go get your maybe.`,
+        })),
+    );
+  }
+
+  return json({
+    expired: stale?.length ?? 0,
+    completed: done?.length ?? 0,
+    reminded: soon?.length ?? 0,
+  });
 });

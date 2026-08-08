@@ -1,5 +1,12 @@
 import { supabase } from './supabase';
-import type { CurrentMatch, Interest, Preferences, Profile } from './types';
+import type {
+  CurrentMatch,
+  Interest,
+  MeetOutcome,
+  PendingFeedback,
+  Preferences,
+  Profile,
+} from './types';
 
 export async function getMyProfile(): Promise<Profile | null> {
   const { data, error } = await supabase.from('profiles').select('*').maybeSingle();
@@ -77,6 +84,25 @@ export async function respondToMatch(
   });
   if (error) throw error;
   return data as { status: string };
+}
+
+export async function getPendingFeedback(): Promise<PendingFeedback | null> {
+  const { data, error } = await supabase.rpc('get_pending_feedback');
+  if (error) throw error;
+  return data as PendingFeedback | null;
+}
+
+export async function submitMeetFeedback(
+  historyId: string,
+  outcome: MeetOutcome,
+  reportReason?: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('submit_meet_feedback', {
+    p_history_id: historyId,
+    p_outcome: outcome,
+    p_report_reason: reportReason ?? null,
+  });
+  if (error) throw error;
 }
 
 export async function deleteAccount(): Promise<void> {

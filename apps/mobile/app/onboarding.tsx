@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import {
   Body,
@@ -17,9 +17,18 @@ import {
   Title,
 } from '../components/ui';
 import { listInterests, setMyInterests, upsertPreferences, upsertProfile } from '../lib/api';
+import * as dialog from '../lib/dialog';
 import { refreshLocation } from '../lib/location';
 import { colors, spacing } from '../lib/theme';
 import type { Gender } from '../lib/types';
+
+/** "19980412" -> "1998-04-12" as you type. */
+function formatBirthdate(raw: string): string {
+  const d = raw.replace(/\D/g, '').slice(0, 8);
+  if (d.length <= 4) return d;
+  if (d.length <= 6) return `${d.slice(0, 4)}-${d.slice(4)}`;
+  return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)}`;
+}
 
 const GENDERS: Array<{ value: Gender; label: string }> = [
   { value: 'woman', label: 'Woman' },
@@ -29,7 +38,7 @@ const GENDERS: Array<{ value: Gender; label: string }> = [
 
 const RADII_KM = [5, 10, 25, 50];
 const MAX_INTERESTS = 5;
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
 
 export default function Onboarding() {
   const [step, setStep] = useState(0);
@@ -48,6 +57,8 @@ export default function Onboarding() {
   const [picked, setPicked] = useState<number[]>([]);
 
   const [hint, setHint] = useState('');
+  const [located, setLocated] = useState(false);
+  const [locating, setLocating] = useState(false);
 
   const birthdateValid = /^\d{4}-\d{2}-\d{2}$/.test(birthdate);
   const agesValid =
@@ -61,6 +72,31 @@ export default function Onboarding() {
           ? [...prev, id]
           : prev,
     );
+  }
+
+  async function shareLocation() {
+    setLocating(true);
+    // persist the profile first so refreshLocation has a row to update
+    try {
+      await upsertProfile({
+        display_name: name.trim(),
+        birthdate,
+        gender: gender!,
+        spot_hint: hint.trim(),
+      });
+      const ok = await refreshLocation();
+      setLocated(ok);
+      if (!ok) {
+        dialog.alert(
+          'No luck',
+          'Location was blocked or unavailable. MeetCute cannot match you without it — check your browser/system permissions and try again.',
+        );
+      }
+    } catch (err) {
+      dialog.alert('Something went wrong', err instanceof Error ? err.message : String(err));
+    } finally {
+      setLocating(false);
+    }
   }
 
   async function finish() {
@@ -79,19 +115,10 @@ export default function Onboarding() {
         radius_km: radius,
       });
       await setMyInterests(picked);
-      const located = await refreshLocation();
-      if (!located) {
-        Alert.alert(
-          'One last thing',
-          'MeetCute needs your location — matches and cafes are chosen near you. Nothing precise is ever shown to anyone.',
-        );
-        setBusy(false);
-        return;
-      }
       await upsertProfile({ onboarding_complete: true });
       router.replace('/today');
     } catch (err) {
-      Alert.alert('Something went wrong', err instanceof Error ? err.message : String(err));
+      dialog.alert('Something went wrong', err instanceof Error ? err.message : String(err));
     } finally {
       setBusy(false);
     }
@@ -108,8 +135,9 @@ export default function Onboarding() {
       <Input
         placeholder="YYYY-MM-DD"
         value={birthdate}
-        onChangeText={setBirthdate}
-        keyboardType="numbers-and-punctuation"
+        onChangeText={(t) => setBirthdate(formatBirthdate(t))}
+        keyboardType="number-pad"
+        maxLength={10}
       />
       <Label>I am a</Label>
       <ChipRow>
@@ -224,18 +252,35 @@ export default function Onboarding() {
         multiline
         style={{ minHeight: 80 }}
       />
-      <Small>
-        Next, we'll ask for your location — matches and cafes are picked near
-        you. Nothing precise is ever shared.
-      </Small>
+      <View style={{ height: spacing.sm }} />
+      <Button
+        title="Continue"
+        onPress={() => setStep(4)}
+        disabled={hint.trim().length < 5}
+      />
+      <Button title="Back" variant="quiet" onPress={() => setStep(2)} />
+    </Animated.View>,
+
+    <Animated.View key="location" entering={FadeInRight.duration(400)} style={{ gap: spacing.md }}>
+      <Title>Found, not searched.</Title>
+      <Body>
+        Matches are chosen near you, and the cafe lands between you two. That
+        takes your location — roughly, quietly, never shown to anyone.
+      </Body>
+      <View style={{ height: spacing.xs }} />
+      {located ? (
+        <Body style={{ color: colors.sage }}>✓ The city knows where to find you.</Body>
+      ) : (
+        <Button title="Share my location" onPress={shareLocation} loading={locating} />
+      )}
       <View style={{ height: spacing.sm }} />
       <Button
         title="Start my first day"
         onPress={finish}
         loading={busy}
-        disabled={hint.trim().length < 5}
+        disabled={!located}
       />
-      <Button title="Back" variant="quiet" onPress={() => setStep(2)} />
+      <Button title="Back" variant="quiet" onPress={() => setStep(3)} />
     </Animated.View>,
   ];
 

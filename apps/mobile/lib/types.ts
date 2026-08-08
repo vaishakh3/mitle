@@ -48,3 +48,10 @@ export interface CurrentMatch {
   window_end: string | null;
   their_spot_hint: string | null;
 }
+
+export interface PendingFeedback {
+  history_id: string;
+  matched_on: string;
+}
+
+export type MeetOutcome = 'met' | 'no_show' | 'didnt_go';
