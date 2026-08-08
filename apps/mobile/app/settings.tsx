@@ -1,8 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, Switch, View } from 'react-native';
-import { Button, Card, Chip, Input, Muted, Screen, Subtitle } from '../components/ui';
+import { Alert, Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import {
+  Body,
+  Button,
+  Card,
+  Chip,
+  ChipRow,
+  Divider,
+  Input,
+  Label,
+  Screen,
+  Small,
+  Title,
+} from '../components/ui';
 import {
   deleteAccount,
   getMyInterestIds,
@@ -14,7 +26,7 @@ import {
   upsertProfile,
 } from '../lib/api';
 import { supabase } from '../lib/supabase';
-import { colors, spacing } from '../lib/theme';
+import { colors, fonts, spacing } from '../lib/theme';
 import type { Gender } from '../lib/types';
 
 const GENDERS: Array<{ value: Gender; label: string }> = [
@@ -22,7 +34,7 @@ const GENDERS: Array<{ value: Gender; label: string }> = [
   { value: 'man', label: 'Men' },
   { value: 'nonbinary', label: 'Non-binary' },
 ];
-const RADII = [5, 10, 25, 50];
+const RADII_KM = [5, 10, 25, 50];
 const MAX_INTERESTS = 5;
 
 export default function Settings() {
@@ -62,7 +74,7 @@ export default function Settings() {
     },
     onSuccess: () => {
       qc.invalidateQueries();
-      Alert.alert('Saved', 'Your changes take effect from the next daily match.');
+      Alert.alert('Saved', 'Changes apply from the next daily match.');
     },
     onError: (err) => Alert.alert('Hmm', err instanceof Error ? err.message : String(err)),
   });
@@ -70,7 +82,7 @@ export default function Settings() {
   function confirmDelete() {
     Alert.alert(
       'Delete your account?',
-      'This erases your profile, preferences, and any active match. There is no undo.',
+      'Profile, preferences, any active match — gone. No undo.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -91,25 +103,60 @@ export default function Settings() {
 
   return (
     <Screen>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.xl }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: spacing.lg,
+          paddingTop: spacing.xl + spacing.sm,
+          paddingBottom: spacing.sm,
+        }}
+      >
+        <Pressable onPress={() => router.back()} hitSlop={12}>
+          <Text style={{ fontSize: 13, fontFamily: fonts.sansBold, letterSpacing: 2, color: colors.muted }}>
+            ← BACK
+          </Text>
+        </Pressable>
+      </View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.sm, gap: spacing.md, paddingBottom: spacing.xxl }}
+      >
+        <Title>Settings</Title>
+
         <Card>
-          <Subtitle>Pause matching</Subtitle>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Muted>Take a break — no new matches while paused.</Muted>
-            <Switch value={paused} onValueChange={setPaused} trackColor={{ true: colors.accent }} />
+            <View style={{ flex: 1, paddingRight: spacing.md }}>
+              <Body style={{ color: colors.text }}>Pause matching</Body>
+              <Small>Take a breath. No new matches while paused.</Small>
+            </View>
+            <Switch
+              value={paused}
+              onValueChange={setPaused}
+              trackColor={{ true: colors.rose, false: colors.border }}
+              thumbColor={colors.text}
+            />
           </View>
         </Card>
 
         <Card>
-          <Subtitle>Your spot hint</Subtitle>
-          <Muted>Revealed to a committed match so they can find you.</Muted>
+          <Label>Your spot hint</Label>
+          <Small>The one line a committed match gets. Make it worth looking for.</Small>
           <View style={{ height: spacing.sm }} />
-          <Input value={hint} onChangeText={setHint} multiline placeholder='e.g. "Red scarf, probably reading a book"' />
+          <Input
+            value={hint}
+            onChangeText={setHint}
+            multiline
+            style={{ minHeight: 70 }}
+            placeholder='"Red scarf, probably reading a book"'
+          />
         </Card>
 
         <Card>
-          <Subtitle>Interested in</Subtitle>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+          <Label>Interested in</Label>
+          <View style={{ height: spacing.sm }} />
+          <ChipRow>
             {GENDERS.map((g) => (
               <Chip
                 key={g.value}
@@ -117,23 +164,28 @@ export default function Settings() {
                 selected={interestedIn.includes(g.value)}
                 onPress={() =>
                   setInterestedIn((prev) =>
-                    prev.includes(g.value) ? prev.filter((x) => x !== g.value) : [...prev, g.value],
+                    prev.includes(g.value)
+                      ? prev.filter((x) => x !== g.value)
+                      : [...prev, g.value],
                   )
                 }
               />
             ))}
-          </View>
-          <Subtitle>Within</Subtitle>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-            {RADII.map((r) => (
+          </ChipRow>
+          <Divider />
+          <Label>Within</Label>
+          <View style={{ height: spacing.sm }} />
+          <ChipRow>
+            {RADII_KM.map((r) => (
               <Chip key={r} label={`${r} km`} selected={radius === r} onPress={() => setRadius(r)} />
             ))}
-          </View>
+          </ChipRow>
         </Card>
 
         <Card>
-          <Subtitle>Interests</Subtitle>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+          <Label>Interests</Label>
+          <View style={{ height: spacing.sm }} />
+          <ChipRow>
             {(interestsQ.data ?? []).map((i) => (
               <Chip
                 key={i.id}
@@ -150,7 +202,7 @@ export default function Settings() {
                 }
               />
             ))}
-          </View>
+          </ChipRow>
         </Card>
 
         <Button title="Save changes" onPress={() => save.mutate()} loading={save.isPending} />

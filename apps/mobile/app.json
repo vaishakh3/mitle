@@ -39,7 +39,8 @@
         {
           "defaultChannel": "default"
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }

@@ -1,19 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { Text } from 'react-native';
-import { colors } from '../lib/theme';
+import { Text, View } from 'react-native';
+import { colors, fonts } from '../lib/theme';
 
-function format(ms: number): string {
-  if (ms <= 0) return '00:00';
+function parts(ms: number): { value: string; caption: string } {
+  if (ms <= 0) return { value: '0:00', caption: '' };
   const totalSec = Math.floor(ms / 1000);
-  const h = Math.floor(totalSec / 3600);
+  const d = Math.floor(totalSec / 86400);
+  const h = Math.floor((totalSec % 86400) / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
   const s = totalSec % 60;
-  if (h > 24) return `${Math.floor(h / 24)}d ${h % 24}h`;
-  if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m`;
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  if (d > 0) return { value: `${d}d ${h}h`, caption: '' };
+  if (h > 0) return { value: `${h}:${String(m).padStart(2, '0')}`, caption: 'hrs' };
+  return { value: `${m}:${String(s).padStart(2, '0')}`, caption: 'min' };
 }
 
-export function Countdown({ until, onDone }: { until: string; onDone?: () => void }) {
+interface CountdownProps {
+  until: string;
+  label?: string;
+  tone?: 'rose' | 'amber' | 'paper';
+  size?: number;
+  onDone?: () => void;
+}
+
+export function Countdown({ until, label, tone = 'rose', size = 44, onDone }: CountdownProps) {
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -22,15 +31,49 @@ export function Countdown({ until, onDone }: { until: string; onDone?: () => voi
   }, []);
 
   const remaining = new Date(until).getTime() - now;
+  const done = remaining <= 0;
 
   useEffect(() => {
-    if (remaining <= 0 && onDone) onDone();
+    if (done && onDone) onDone();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [remaining <= 0]);
+  }, [done]);
+
+  const color = tone === 'amber' ? colors.amber : tone === 'paper' ? colors.ink : colors.rose;
+  const { value, caption } = parts(remaining);
 
   return (
-    <Text style={{ color: colors.accent, fontSize: 32, fontWeight: '800', fontVariant: ['tabular-nums'] }}>
-      {format(remaining)}
-    </Text>
+    <View style={{ alignItems: 'center' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+        <Text
+          style={{
+            color,
+            fontSize: size,
+            fontFamily: fonts.serif,
+            fontVariant: ['tabular-nums'],
+          }}
+        >
+          {value}
+        </Text>
+        {!!caption && (
+          <Text style={{ color, fontSize: size * 0.35, fontFamily: fonts.sansMedium }}>
+            {caption}
+          </Text>
+        )}
+      </View>
+      {!!label && (
+        <Text
+          style={{
+            color: tone === 'paper' ? colors.inkSoft : colors.muted,
+            fontSize: 11,
+            fontFamily: fonts.sansBold,
+            letterSpacing: 2,
+            textTransform: 'uppercase',
+            marginTop: 2,
+          }}
+        >
+          {label}
+        </Text>
+      )}
+    </View>
   );
 }
