@@ -1,0 +1,23 @@
+{
+  "name": "meetcute",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit -p tsconfig.json && (cd apps/mobile && npx tsc --noEmit)",
+    "db:start": "npx supabase start",
+    "db:stop": "npx supabase stop",
+    "db:reset": "npx supabase db reset",
+    "functions:serve": "npx supabase functions serve --env-file supabase/functions/.env",
+    "seed": "node scripts/seed.mjs",
+    "trigger:match": "node scripts/trigger.mjs daily-match",
+    "trigger:expire": "node scripts/trigger.mjs expire-matches",
+    "verify:e2e": "node scripts/verify-loop.mjs"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.49.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.1.0"
+  }
+}

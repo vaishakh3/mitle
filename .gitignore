@@ -1,0 +1,10 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.DS_Store
+supabase/.temp/
+supabase/functions/.env
+apps/mobile/.expo/
+apps/mobile/dist/
+*.log
