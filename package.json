@@ -13,10 +13,12 @@
     "seed": "node scripts/seed.mjs",
     "trigger:match": "node scripts/trigger.mjs daily-match",
     "trigger:expire": "node scripts/trigger.mjs expire-matches",
-    "verify:e2e": "node scripts/verify-loop.mjs"
+    "verify:e2e": "node scripts/verify-loop.mjs",
+    "screenshots": "node scripts/screenshots.mjs"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.49.0",
+    "playwright": "^1.62.1",
     "typescript": "^5.6.0",
     "vitest": "^3.1.0"
   }
