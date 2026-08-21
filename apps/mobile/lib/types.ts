@@ -1,4 +1,7 @@
 export type Gender = 'man' | 'woman' | 'nonbinary';
+export type RelationshipIntent = 'long_term' | 'open' | 'figuring_out';
+export type SocialEnergy = 'quiet' | 'balanced' | 'lively';
+export type DateStyle = 'coffee' | 'activity' | 'sober' | 'anything';
 
 export interface Profile {
   user_id: string;
@@ -11,7 +14,16 @@ export interface Profile {
   location_updated_at: string | null;
   expo_push_token: string | null;
   is_paused: boolean;
+  is_suspended: boolean;
   onboarding_complete: boolean;
+  rules_acknowledged_at: string | null;
+  terms_accepted_at: string | null;
+  terms_version: string | null;
+  privacy_accepted_at: string | null;
+  privacy_version: string | null;
+  community_accepted_at: string | null;
+  community_version: string | null;
+  safety_acknowledged_at: string | null;
 }
 
 export interface Preferences {
@@ -20,6 +32,12 @@ export interface Preferences {
   age_min: number;
   age_max: number;
   radius_km: number;
+  available_days: number[];
+  preferred_hour: number;
+  relationship_intent: RelationshipIntent;
+  social_energy: SocialEnergy;
+  date_style: DateStyle;
+  budget_level: number;
 }
 
 export interface Interest {
@@ -47,6 +65,14 @@ export interface CurrentMatch {
   window_start: string | null;
   window_end: string | null;
   their_spot_hint: string | null;
+  your_signal: MeetSignal | null;
+  their_signal: MeetSignal | null;
+  you_confirmed: boolean;
+  they_confirmed: boolean;
+  confirmation_opens_at: string | null;
+  meeting_phrase: string | null;
+  cancelled: boolean;
+  cancelled_by_you: boolean;
 }
 
 export interface PendingFeedback {
@@ -54,4 +80,12 @@ export interface PendingFeedback {
   matched_on: string;
 }
 
+export interface SecondChapterResult {
+  history_id: string;
+  matched_on: string;
+  note: string;
+}
+
 export type MeetOutcome = 'met' | 'no_show' | 'didnt_go';
+
+export type MeetSignal = 'heading_there' | 'arrived' | 'running_late' | 'cant_make_it';

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Milte accent app icon</title>
+  <desc id="desc">Warm-paper meeting-space mark on gulmohar.</desc>
+  <rect width="1024" height="1024" fill="#A73550"/>
+  <path fill="#F4EDE3" d="m272 176 160 104c-48 88-72 192-72 312s24 224 72 312L272 1008V176Z" transform="translate(0 -80)"/>
+  <path fill="#F4EDE3" d="m752 176-160 104c48 88 72 192 72 312s-24 224-72 312l160 104V176Z" transform="translate(0 -80)"/>
+  <circle cx="512" cy="512" r="64" fill="#0B0A0D"/>
+</svg>

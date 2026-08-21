@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { colors, fonts } from '../lib/theme';
 
@@ -24,6 +24,11 @@ interface CountdownProps {
 
 export function Countdown({ until, label, tone = 'rose', size = 44, onDone }: CountdownProps) {
   const [now, setNow] = useState(Date.now());
+  const onDoneRef = useRef(onDone);
+
+  useEffect(() => {
+    onDoneRef.current = onDone;
+  }, [onDone]);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -34,8 +39,7 @@ export function Countdown({ until, label, tone = 'rose', size = 44, onDone }: Co
   const done = remaining <= 0;
 
   useEffect(() => {
-    if (done && onDone) onDone();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (done) onDoneRef.current?.();
   }, [done]);
 
   const color = tone === 'amber' ? colors.amber : tone === 'paper' ? colors.ink : colors.rose;

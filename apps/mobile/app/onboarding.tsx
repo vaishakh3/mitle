@@ -1,17 +1,26 @@
 import { useQuery } from '@tanstack/react-query';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { ScrollView, View } from 'react-native';
-import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
+import { Platform, Pressable, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeInRight } from 'react-native-reanimated';
 import {
   Body,
   Button,
+  Card,
+  CheckRow,
   Chip,
   ChipRow,
+  ChoiceCard,
+  Field,
   Input,
   Label,
+  Page,
+  PageScroll,
   Poetic,
   ProgressDots,
+  Rule,
   Screen,
   Small,
   Title,
@@ -19,15 +28,24 @@ import {
 import { listInterests, setMyInterests, upsertPreferences, upsertProfile } from '../lib/api';
 import * as dialog from '../lib/dialog';
 import { refreshLocation } from '../lib/location';
-import { colors, spacing } from '../lib/theme';
-import type { Gender } from '../lib/types';
+import { LEGAL_VERSION } from '../lib/legal';
+import { hourLabel, MEET_HOURS, WEEKDAYS } from '../lib/schedule';
+import { colors, fonts, radii, spacing } from '../lib/theme';
+import type { DateStyle, Gender, RelationshipIntent, SocialEnergy } from '../lib/types';
+import { birthdateError } from '../lib/validation';
 
-/** "19980412" -> "1998-04-12" as you type. */
-function formatBirthdate(raw: string): string {
-  const d = raw.replace(/\D/g, '').slice(0, 8);
-  if (d.length <= 4) return d;
-  if (d.length <= 6) return `${d.slice(0, 4)}-${d.slice(4)}`;
-  return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)}`;
+function formatBirthdate(date: Date): string {
+  const year = String(date.getFullYear()).padStart(4, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function dateYearsAgo(years: number): Date {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() - years);
+  date.setHours(12, 0, 0, 0);
+  return date;
 }
 
 const GENDERS: Array<{ value: Gender; label: string }> = [
@@ -35,65 +53,85 @@ const GENDERS: Array<{ value: Gender; label: string }> = [
   { value: 'man', label: 'Man' },
   { value: 'nonbinary', label: 'Non-binary' },
 ];
-
 const RADII_KM = [5, 10, 25, 50];
 const MAX_INTERESTS = 5;
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 7;
+const RELATIONSHIP_INTENTS: Array<{ value: RelationshipIntent; title: string; body: string }> = [
+  { value: 'long_term', title: 'Something lasting', body: 'I am dating with a long-term relationship in mind.' },
+  { value: 'open', title: 'Open, if it feels right', body: 'I care more about the person than naming the ending now.' },
+  { value: 'figuring_out', title: 'Still figuring it out', body: 'I want to meet honestly without promising a destination.' },
+];
+const SOCIAL_ENERGIES: Array<{ value: SocialEnergy; label: string }> = [
+  { value: 'quiet', label: 'Quiet' },
+  { value: 'balanced', label: 'Balanced' },
+  { value: 'lively', label: 'Lively' },
+];
+const DATE_STYLES: Array<{ value: DateStyle; label: string }> = [
+  { value: 'coffee', label: 'Coffee & conversation' },
+  { value: 'activity', label: 'Something to do' },
+  { value: 'sober', label: 'Always alcohol-free' },
+  { value: 'anything', label: 'Surprise me' },
+];
 
 export default function Onboarding() {
+  const insets = useSafeAreaInsets();
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
-
   const [name, setName] = useState('');
   const [birthdate, setBirthdate] = useState('');
+  const [showBirthdatePicker, setShowBirthdatePicker] = useState(false);
   const [gender, setGender] = useState<Gender | null>(null);
-
   const [interestedIn, setInterestedIn] = useState<Gender[]>([]);
   const [ageMin, setAgeMin] = useState('21');
   const [ageMax, setAgeMax] = useState('35');
   const [radius, setRadius] = useState(10);
-
-  const interestsQuery = useQuery({ queryKey: ['interests'], queryFn: listInterests });
+  const [availableDays, setAvailableDays] = useState<number[]>([2, 4, 6]);
+  const [preferredHour, setPreferredHour] = useState(19);
+  const [relationshipIntent, setRelationshipIntent] = useState<RelationshipIntent>('open');
+  const [socialEnergy, setSocialEnergy] = useState<SocialEnergy>('balanced');
+  const [dateStyle, setDateStyle] = useState<DateStyle>('coffee');
+  const [budgetLevel, setBudgetLevel] = useState(2);
   const [picked, setPicked] = useState<number[]>([]);
-
   const [hint, setHint] = useState('');
   const [located, setLocated] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [rulesAccepted, setRulesAccepted] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [communityAccepted, setCommunityAccepted] = useState(false);
 
-  const birthdateValid = /^\d{4}-\d{2}-\d{2}$/.test(birthdate);
-  const agesValid =
-    Number(ageMin) >= 18 && Number(ageMax) <= 99 && Number(ageMax) >= Number(ageMin);
+  const interestsQuery = useQuery({ queryKey: ['interests'], queryFn: listInterests });
+  const birthdayMessage = birthdate.length === 10 ? birthdateError(birthdate) : null;
+  const birthdateValid = birthdate.length === 10 && !birthdayMessage;
+  const agesValid = Number(ageMin) >= 18 && Number(ageMax) <= 99 && Number(ageMax) >= Number(ageMin);
+  const latestBirthdate = dateYearsAgo(18);
+  const earliestBirthdate = dateYearsAgo(99);
+  const selectedBirthdate = birthdate ? new Date(`${birthdate}T12:00:00`) : dateYearsAgo(25);
+
+  function chooseBirthdate(event: DateTimePickerEvent, value?: Date) {
+    if (Platform.OS === 'android') setShowBirthdatePicker(false);
+    if (event.type === 'set' && value) setBirthdate(formatBirthdate(value));
+  }
 
   function toggleInterest(id: number) {
-    setPicked((prev) =>
-      prev.includes(id)
-        ? prev.filter((x) => x !== id)
-        : prev.length < MAX_INTERESTS
-          ? [...prev, id]
-          : prev,
-    );
+    setPicked((prev) => prev.includes(id) ? prev.filter((value) => value !== id) : prev.length < MAX_INTERESTS ? [...prev, id] : prev);
+  }
+
+  function toggleDay(day: number) {
+    setAvailableDays((prev) => prev.includes(day) ? prev.filter((value) => value !== day) : [...prev, day]);
   }
 
   async function shareLocation() {
     setLocating(true);
-    // persist the profile first so refreshLocation has a row to update
     try {
-      await upsertProfile({
-        display_name: name.trim(),
-        birthdate,
-        gender: gender!,
-        spot_hint: hint.trim(),
-      });
+      await upsertProfile({ display_name: name.trim(), birthdate, gender: gender!, spot_hint: hint.trim() });
       const ok = await refreshLocation();
       setLocated(ok);
       if (!ok) {
-        dialog.alert(
-          'No luck',
-          'Location was blocked or unavailable. MeetCute cannot match you without it — check your browser/system permissions and try again.',
-        );
+        dialog.alert('Location is still off', 'Milte needs location while you use the app to find a public meeting place between you and your match. Check system permissions, then try again.');
       }
-    } catch (err) {
-      dialog.alert('Something went wrong', err instanceof Error ? err.message : String(err));
+    } catch (error) {
+      dialog.alert('We could not save that', error instanceof Error ? error.message : String(error));
     } finally {
       setLocating(false);
     }
@@ -102,201 +140,260 @@ export default function Onboarding() {
   async function finish() {
     setBusy(true);
     try {
+      const acceptedAt = new Date().toISOString();
       await upsertProfile({
         display_name: name.trim(),
         birthdate,
         gender: gender!,
         spot_hint: hint.trim(),
+        rules_acknowledged_at: acceptedAt,
+        terms_accepted_at: acceptedAt,
+        terms_version: LEGAL_VERSION,
+        privacy_accepted_at: acceptedAt,
+        privacy_version: LEGAL_VERSION,
+        community_accepted_at: acceptedAt,
+        community_version: LEGAL_VERSION,
+        safety_acknowledged_at: acceptedAt,
       });
       await upsertPreferences({
         interested_genders: interestedIn,
         age_min: Number(ageMin),
         age_max: Number(ageMax),
         radius_km: radius,
+        available_days: availableDays,
+        preferred_hour: preferredHour,
+        relationship_intent: relationshipIntent,
+        social_energy: socialEnergy,
+        date_style: dateStyle,
+        budget_level: budgetLevel,
       });
       await setMyInterests(picked);
       await upsertProfile({ onboarding_complete: true });
       router.replace('/today');
-    } catch (err) {
-      dialog.alert('Something went wrong', err instanceof Error ? err.message : String(err));
+    } catch (error) {
+      dialog.alert('We could not finish setup', error instanceof Error ? error.message : String(error));
     } finally {
       setBusy(false);
     }
   }
 
-  const steps = [
-    <Animated.View key="about" entering={FadeInRight.duration(400)} style={{ gap: spacing.md }}>
-      <Title>First — you.</Title>
-      <Body>Kept under lock. Your match never sees any of this.</Body>
-      <View style={{ height: spacing.xs }} />
-      <Label>Your name</Label>
-      <Input placeholder="What do friends call you?" value={name} onChangeText={setName} />
-      <Label>Born on</Label>
-      <Input
-        placeholder="YYYY-MM-DD"
-        value={birthdate}
-        onChangeText={(t) => setBirthdate(formatBirthdate(t))}
-        keyboardType="number-pad"
-        maxLength={10}
-      />
-      <Label>I am a</Label>
-      <ChipRow>
-        {GENDERS.map((g) => (
-          <Chip
-            key={g.value}
-            label={g.label}
-            selected={gender === g.value}
-            onPress={() => setGender(g.value)}
-          />
-        ))}
-      </ChipRow>
-      <View style={{ height: spacing.sm }} />
-      <Button
-        title="Continue"
-        onPress={() => setStep(1)}
-        disabled={!name.trim() || !birthdateValid || !gender}
-      />
-    </Animated.View>,
-
-    <Animated.View key="prefs" entering={FadeInRight.duration(400)} style={{ gap: spacing.md }}>
-      <Title>Who might it be?</Title>
-      <Body>The only steering you get. The rest is left to chance.</Body>
-      <View style={{ height: spacing.xs }} />
-      <Label>Interested in</Label>
-      <ChipRow>
-        {GENDERS.map((g) => (
-          <Chip
-            key={g.value}
-            label={g.label}
-            selected={interestedIn.includes(g.value)}
-            onPress={() =>
-              setInterestedIn((prev) =>
-                prev.includes(g.value) ? prev.filter((x) => x !== g.value) : [...prev, g.value],
-              )
-            }
-          />
-        ))}
-      </ChipRow>
-      <Label>Between the ages of</Label>
-      <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
-        <Input
-          style={{ flex: 1, textAlign: 'center' }}
-          keyboardType="number-pad"
-          maxLength={2}
-          value={ageMin}
-          onChangeText={setAgeMin}
-        />
-        <Small>and</Small>
-        <Input
-          style={{ flex: 1, textAlign: 'center' }}
-          keyboardType="number-pad"
-          maxLength={2}
-          value={ageMax}
-          onChangeText={setAgeMax}
-        />
+  const screens = [
+    <View style={{ gap: spacing.lg }}>
+      <View style={{ gap: spacing.sm }}>
+        <Label style={{ color: colors.accentText }}>01 · The person behind the maybe</Label>
+        <Title>First, the private bits.</Title>
+        <Body>Your match never sees your name, age, birthday, or gender. These are for eligibility and support only.</Body>
       </View>
-      {!agesValid && <Small style={{ color: colors.danger }}>18+, and in order.</Small>}
-      <Label>Within</Label>
-      <ChipRow>
-        {RADII_KM.map((r) => (
-          <Chip key={r} label={`${r} km`} selected={radius === r} onPress={() => setRadius(r)} />
-        ))}
-      </ChipRow>
-      <View style={{ height: spacing.sm }} />
-      <Button
-        title="Continue"
-        onPress={() => setStep(2)}
-        disabled={interestedIn.length === 0 || !agesValid}
-      />
-      <Button title="Back" variant="quiet" onPress={() => setStep(0)} />
-    </Animated.View>,
+      <Field label="First name">
+        <Input accessibilityLabel="First name" placeholder="What do friends call you?" value={name} onChangeText={setName} maxLength={50} autoComplete="name" />
+      </Field>
+      <Field label="Date of birth" hint="You must be 18 or older.">
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Date of birth"
+          accessibilityHint="Opens a calendar"
+          accessibilityValue={{ text: birthdate || 'Not selected' }}
+          onPress={() => setShowBirthdatePicker(true)}
+          style={{
+            minHeight: 56,
+            backgroundColor: 'rgba(26,23,32,0.92)',
+            borderColor: colors.border,
+            borderWidth: 1,
+            borderRadius: radii.sm,
+            paddingHorizontal: spacing.md,
+            paddingVertical: 15,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Text style={{ color: birthdate ? colors.text : colors.faint, fontFamily: fonts.sans, fontSize: 16 }}>
+            {birthdate || 'Choose from calendar'}
+          </Text>
+          <Text importantForAccessibility="no" style={{ color: colors.accentText, fontFamily: fonts.sansBold, fontSize: 12, letterSpacing: 1.2 }}>CHOOSE</Text>
+        </Pressable>
+        {showBirthdatePicker && (
+          <View style={{ gap: spacing.sm }}>
+            <DateTimePicker
+              value={selectedBirthdate}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
+              minimumDate={earliestBirthdate}
+              maximumDate={latestBirthdate}
+              onChange={chooseBirthdate}
+            />
+            {Platform.OS === 'ios' && <Button title="Done" variant="quiet" onPress={() => setShowBirthdatePicker(false)} />}
+          </View>
+        )}
+        {!!birthdayMessage && <Small style={{ color: colors.danger }}>{birthdayMessage}</Small>}
+      </Field>
+      <Field label="I am a">
+        <ChipRow>{GENDERS.map((item) => <Chip key={item.value} label={item.label} selected={gender === item.value} onPress={() => setGender(item.value)} />)}</ChipRow>
+      </Field>
+      <Button title="Continue" onPress={() => setStep(1)} disabled={!name.trim() || !birthdateValid || !gender} />
+    </View>,
 
-    <Animated.View key="interests" entering={FadeInRight.duration(400)} style={{ gap: spacing.md }}>
-      <Title>Things you love</Title>
-      <Body>
-        Pick up to {MAX_INTERESTS}. The algorithm listens — a little. Fate does
-        the rest.
-      </Body>
-      <View style={{ height: spacing.xs }} />
-      <ChipRow>
-        {(interestsQuery.data ?? []).map((i) => (
-          <Chip
-            key={i.id}
-            label={`${i.emoji} ${i.label}`}
-            selected={picked.includes(i.id)}
-            onPress={() => toggleInterest(i.id)}
-          />
-        ))}
-      </ChipRow>
-      <Small>
-        {picked.length}/{MAX_INTERESTS} chosen
-      </Small>
-      <View style={{ height: spacing.sm }} />
-      <Button title="Continue" onPress={() => setStep(3)} disabled={picked.length === 0} />
-      <Button title="Back" variant="quiet" onPress={() => setStep(1)} />
-    </Animated.View>,
+    <View style={{ gap: spacing.lg }}>
+      <View style={{ gap: spacing.sm }}>
+        <Label style={{ color: colors.accentText }}>02 · Your boundaries</Label>
+        <Title>Who could this be?</Title>
+        <Body>These are hard filters, not suggestions. A match is possible only when both people fit each other’s choices.</Body>
+      </View>
+      <Field label="Interested in">
+        <ChipRow>{GENDERS.map((item) => <Chip key={item.value} label={item.label} selected={interestedIn.includes(item.value)} onPress={() => setInterestedIn((prev) => prev.includes(item.value) ? prev.filter((value) => value !== item.value) : [...prev, item.value])} />)}</ChipRow>
+      </Field>
+      <Field label="Age range">
+        <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
+          <Input accessibilityLabel="Minimum age" style={{ flex: 1, textAlign: 'center' }} keyboardType="number-pad" maxLength={2} value={ageMin} onChangeText={setAgeMin} />
+          <Small>to</Small>
+          <Input accessibilityLabel="Maximum age" style={{ flex: 1, textAlign: 'center' }} keyboardType="number-pad" maxLength={2} value={ageMax} onChangeText={setAgeMax} />
+        </View>
+        {!agesValid && <Small style={{ color: colors.danger }}>Use an 18–99 range, from lower to higher.</Small>}
+      </Field>
+      <Field label="Maximum distance" hint="We use the smaller radius when two people differ.">
+        <ChipRow>{RADII_KM.map((value) => <Chip key={value} label={`${value} km`} selected={radius === value} onPress={() => setRadius(value)} />)}</ChipRow>
+      </Field>
+      <Button title="Continue" onPress={() => setStep(2)} disabled={!interestedIn.length || !agesValid} />
+    </View>,
 
-    <Animated.View key="hint" entering={FadeInRight.duration(400)} style={{ gap: spacing.md }}>
-      <Title>How will they know it's you?</Title>
-      <Body>
-        No name. No photo. When you both commit to a meet, your match gets only
-        this one line. Make it worth looking for.
-      </Body>
-      <Poetic style={{ color: colors.blush }}>
-        "Red scarf, probably reading a book."
-      </Poetic>
-      <Input
-        placeholder="Your one line…"
-        value={hint}
-        onChangeText={setHint}
-        multiline
-        style={{ minHeight: 80 }}
-      />
-      <View style={{ height: spacing.sm }} />
-      <Button
-        title="Continue"
-        onPress={() => setStep(4)}
-        disabled={hint.trim().length < 5}
-      />
-      <Button title="Back" variant="quiet" onPress={() => setStep(2)} />
-    </Animated.View>,
+    <View style={{ gap: spacing.lg }}>
+      <View style={{ gap: spacing.sm }}>
+        <Label style={{ color: colors.accentText }}>03 · A date you can keep</Label>
+        <Title>When are you actually free?</Title>
+        <Body>We only put you in a draw when tomorrow works for you. Fewer maybes, fewer no-shows.</Body>
+      </View>
+      <Field label="Days I can usually meet">
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 6 }}>
+          {WEEKDAYS.map((day) => (
+            <Pressable key={day.value} accessibilityRole="checkbox" accessibilityLabel={day.label} accessibilityState={{ checked: availableDays.includes(day.value) }} onPress={() => toggleDay(day.value)} style={{ flex: 1, height: 48, borderRadius: 16, borderWidth: 1, borderColor: availableDays.includes(day.value) ? colors.paper : colors.border, backgroundColor: availableDays.includes(day.value) ? colors.paper : colors.surface, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ color: availableDays.includes(day.value) ? colors.ink : colors.textDim, fontFamily: fonts.sansBold }}>{day.short}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </Field>
+      <Field label="Best start time" hint="We choose the fairest hour between both preferences.">
+        <ChipRow>{MEET_HOURS.map((hour) => <Chip key={hour} label={hourLabel(hour)} selected={preferredHour === hour} onPress={() => setPreferredHour(hour)} />)}</ChipRow>
+      </Field>
+      <Card tone="outlined">
+        <Poetic style={{ color: colors.blush }}>“Spontaneous” works better with a little honesty first.</Poetic>
+      </Card>
+      <Button title="Continue" onPress={() => setStep(3)} disabled={!availableDays.length} />
+    </View>,
 
-    <Animated.View key="location" entering={FadeInRight.duration(400)} style={{ gap: spacing.md }}>
-      <Title>Found, not searched.</Title>
-      <Body>
-        Matches are chosen near you, and the cafe lands between you two. That
-        takes your location — roughly, quietly, never shown to anyone.
-      </Body>
-      <View style={{ height: spacing.xs }} />
-      {located ? (
-        <Body style={{ color: colors.sage }}>✓ The city knows where to find you.</Body>
+    <View style={{ gap: spacing.lg }}>
+      <View style={{ gap: spacing.sm }}>
+        <Label style={{ color: colors.accentText }}>04 · The shape of a good hour</Label>
+        <Title>Private answers. Better surprises.</Title>
+        <Body>These help us avoid obvious mismatches. They are never shown as a profile or used as a popularity score.</Body>
+      </View>
+      <Field label="What are you open to?">
+        <View accessibilityRole="radiogroup" style={{ gap: spacing.sm }}>
+          {RELATIONSHIP_INTENTS.map((item) => (
+            <ChoiceCard key={item.value} title={item.title} body={item.body} selected={relationshipIntent === item.value} onPress={() => setRelationshipIntent(item.value)} />
+          ))}
+        </View>
+      </Field>
+      <Field label="My social energy">
+        <ChipRow>{SOCIAL_ENERGIES.map((item) => <Chip key={item.value} label={item.label} selected={socialEnergy === item.value} onPress={() => setSocialEnergy(item.value)} />)}</ChipRow>
+      </Field>
+      <Field label="A first meet should feel like">
+        <ChipRow>{DATE_STYLES.map((item) => <Chip key={item.value} label={item.label} selected={dateStyle === item.value} onPress={() => setDateStyle(item.value)} />)}</ChipRow>
+      </Field>
+      <Field label="Comfortable spend" hint="We use the lower shared comfort when choosing a venue.">
+        <ChipRow>{[1, 2, 3].map((value) => <Chip key={value} label={'₹'.repeat(value)} selected={budgetLevel === value} onPress={() => setBudgetLevel(value)} />)}</ChipRow>
+      </Field>
+      <Button title="Continue" onPress={() => setStep(4)} />
+    </View>,
+
+    <View style={{ gap: spacing.lg }}>
+      <View style={{ gap: spacing.sm }}>
+        <Label style={{ color: colors.accentText }}>05 · A nudge, not a résumé</Label>
+        <Title>Things you genuinely like.</Title>
+        <Body>Pick up to five. Shared interests nudge the match; chance still gets the final word.</Body>
+      </View>
+      {interestsQuery.isError ? (
+        <Card accessibilityRole="alert"><Body>We could not load interests.</Body><View style={{ height: spacing.md }} /><Button title="Try again" variant="ghost" onPress={() => interestsQuery.refetch()} /></Card>
       ) : (
-        <Button title="Share my location" onPress={shareLocation} loading={locating} />
+        <ChipRow>{(interestsQuery.data ?? []).map((item) => <Chip key={item.id} label={item.label} selected={picked.includes(item.id)} onPress={() => toggleInterest(item.id)} />)}</ChipRow>
       )}
-      <View style={{ height: spacing.sm }} />
+      <Small>{picked.length} of {MAX_INTERESTS} chosen</Small>
+      <Button title="Continue" onPress={() => setStep(5)} disabled={!picked.length} />
+    </View>,
+
+    <View style={{ gap: spacing.lg }}>
+      <View style={{ gap: spacing.sm }}>
+        <Label style={{ color: colors.accentText }}>06 · The only clue</Label>
+        <Title>How will they spot you?</Title>
+        <Body>This appears only after you both say yes. Describe something visible that day—never your name, workplace, or contact details.</Body>
+      </View>
+      <Card tone="warm">
+        <Poetic style={{ color: colors.blush }}>“Red scarf, probably reading a book.”</Poetic>
+      </Card>
+      <Field label="My spot hint" hint={`${hint.trim().length}/120 characters`}>
+        <Input accessibilityLabel="Spot hint" placeholder="I’ll be the one in…" value={hint} onChangeText={setHint} multiline maxLength={120} style={{ minHeight: 100, textAlignVertical: 'top' }} />
+      </Field>
+      <Button title="Continue" onPress={() => setStep(6)} disabled={hint.trim().length < 8} />
+    </View>,
+
+    <View style={{ gap: spacing.lg }}>
+      <View style={{ gap: spacing.sm }}>
+        <Label style={{ color: colors.accentText }}>07 · Ready for the city</Label>
+        <Title>Found, never exposed.</Title>
+        <Body>Your location helps us choose someone nearby and a public venue between you. It is never shown to another member.</Body>
+      </View>
+      <Card tone="outlined" style={{ gap: spacing.md }}>
+        <Rule mark="A" title="Public places only" body="First meets are placed in named, populated public venues." />
+        <Rule mark="B" title="Leave whenever you want" body="A yes is never an obligation to stay." />
+        <Rule mark="C" title="Share the plan" body="Your ticket has a one-tap safety share." />
+      </Card>
+      {located ? (
+        <Card style={{ borderColor: colors.sage }}><Body style={{ color: colors.sage }}>✓ Location is ready. Your exact coordinates stay private.</Body></Card>
+      ) : (
+        <View style={{ gap: spacing.sm }}>
+          <Button title="Allow location while using the app" variant="secondary" onPress={shareLocation} loading={locating} />
+          <Small>You can finish setup without location. Milte will ask again before you can enter a draw.</Small>
+        </View>
+      )}
+      <CheckRow checked={rulesAccepted} onPress={() => setRulesAccepted((value) => !value)}>
+        I am 18 or older. I will meet only when I feel comfortable, treat the other person with respect, and leave or report anything that feels wrong.
+      </CheckRow>
+      <CheckRow checked={termsAccepted} onPress={() => setTermsAccepted((value) => !value)}>
+        I have read and accept the Terms of Use.
+      </CheckRow>
+      <Button title="Read the Terms" variant="quiet" onPress={() => router.push('/terms')} />
+      <CheckRow checked={privacyAccepted} onPress={() => setPrivacyAccepted((value) => !value)}>
+        I have read the Privacy Notice and understand how my data is used.
+      </CheckRow>
+      <Button title="Read the Privacy Notice" variant="quiet" onPress={() => router.push('/privacy')} />
+      <CheckRow checked={communityAccepted} onPress={() => setCommunityAccepted((value) => !value)}>
+        I agree to the Community Rules, including consent, respect, and public-place safety.
+      </CheckRow>
+      <Button title="Read the Community Rules" variant="quiet" onPress={() => router.push('/community')} />
       <Button
-        title="Start my first day"
+        title={located ? "Join tomorrow’s possibility" : "Finish setup — add location later"}
         onPress={finish}
         loading={busy}
-        disabled={!located}
+        disabled={!rulesAccepted || !termsAccepted || !privacyAccepted || !communityAccepted}
       />
-      <Button title="Back" variant="quiet" onPress={() => setStep(3)} />
-    </Animated.View>,
+    </View>,
   ];
 
   return (
     <Screen>
-      <ScrollView
-        contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xxl + spacing.md }}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Animated.View entering={FadeInDown.duration(500)}>
-          <ProgressDots total={TOTAL_STEPS} current={step} />
+      <Page style={{ paddingTop: Math.max(insets.top, spacing.md) + spacing.md, paddingBottom: spacing.md, gap: spacing.md }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Previous step" accessibilityState={{ disabled: step === 0 }} disabled={step === 0} onPress={() => setStep((value) => Math.max(0, value - 1))} hitSlop={12} style={{ minHeight: 48, justifyContent: 'center' }}>
+            <Text style={{ color: step === 0 ? colors.faint : colors.textDim, fontFamily: fonts.sansBold, fontSize: 12, letterSpacing: 1.5 }}>← BACK</Text>
+          </Pressable>
+          <Small>{step + 1} / {TOTAL_STEPS}</Small>
+        </View>
+        <ProgressDots total={TOTAL_STEPS} current={step} />
+      </Page>
+      <PageScroll contentContainerStyle={{ paddingTop: spacing.md }}>
+        <Animated.View key={step} entering={FadeInRight.duration(320)}>
+          {screens[step]}
         </Animated.View>
-        <View style={{ height: spacing.lg }} />
-        {steps[step]}
-      </ScrollView>
+      </PageScroll>
     </Screen>
   );
 }

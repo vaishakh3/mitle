@@ -1,28 +1,49 @@
 {
   "expo": {
-    "name": "MeetCute",
-    "slug": "meetcute",
-    "scheme": "meetcute",
+    "name": "Milte",
+    "slug": "milte",
+    "scheme": "milte",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.meetcute"
+      "bundleIdentifier": "app.milte"
     },
     "android": {
-      "package": "app.meetcute",
+      "package": "app.milte",
+      "versionCode": 3,
+      "allowBackup": false,
+      "softwareKeyboardLayoutMode": "resize",
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.POST_NOTIFICATIONS"
+      ],
+      "blockedPermissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
       "adaptiveIcon": {
-        "backgroundColor": "#0F0E17",
+        "backgroundColor": "#0B0A0D",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": true
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "awsRegion": "ap-south-1",
+      "apiUrl": "https://5t32c9fq3l.execute-api.ap-south-1.amazonaws.com",
+      "cognitoUserPoolId": "ap-south-1_bFAaQYQW4",
+      "cognitoClientId": "6ft7n93nre2r7gq9kge7e184qf",
+      "playReviewEmail": "play-review@milte.app",
+      "webUrl": "https://d1w5h7ki7ldbx2.cloudfront.net"
     },
     "plugins": [
       "expo-router",
@@ -31,7 +52,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "MeetCute uses your approximate location to find matches and meet-cute spots near you."
+          "locationWhenInUsePermission": "Milte uses your approximate location to find a nearby match and a safe public meeting place between you."
         }
       ],
       [
@@ -40,7 +61,41 @@
           "defaultChannel": "default"
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0B0A0D",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#0B0A0D",
+            "image": "./assets/splash-icon.png"
+          }
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 24,
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "buildToolsVersion": "36.0.0",
+            "buildArchs": [
+              "arm64-v8a",
+              "x86_64"
+            ],
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "networkInspector": false,
+            "usesCleartextTraffic": false,
+            "useDayNightTheme": true
+          }
+        }
+      ],
+      "@react-native-community/datetimepicker"
     ]
   }
 }

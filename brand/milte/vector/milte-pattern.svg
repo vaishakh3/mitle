@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" role="img" aria-labelledby="title desc">
+  <title id="title">Milte modular pattern</title>
+  <desc id="desc">Cropped meeting-space brackets and dots on warm paper.</desc>
+  <rect width="1200" height="600" fill="#F4EDE3"/>
+  <g fill="#0B0A0D">
+    <path d="M-30 72 90 150C54 216 36 294 36 384s18 168 54 234L-30 696V72Z"/>
+    <path d="m380-88-120 78c36 66 54 144 54 234s-18 168-54 234l120 78V-88Z"/>
+    <path d="m722 176 120 78c-36 66-54 144-54 234s18 168 54 234l-120 78V176Z"/>
+    <path d="m1216-32-120 78c36 66 54 144 54 234s-18 168-54 234l120 78V-32Z"/>
+  </g>
+  <g fill="#A73550">
+    <circle cx="170" cy="132" r="28"/>
+    <circle cx="524" cy="484" r="38"/>
+    <circle cx="1008" cy="118" r="24"/>
+    <circle cx="1122" cy="548" r="44"/>
+  </g>
+</svg>

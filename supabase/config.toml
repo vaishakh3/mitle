@@ -387,6 +387,9 @@ verify_jwt = false
 [functions.respond-match]
 verify_jwt = true
 
+[functions.update-meet-signal]
+verify_jwt = true
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.

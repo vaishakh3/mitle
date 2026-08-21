@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Milte Android adaptive icon foreground</title>
+  <desc id="desc">Safe-area Milte mark on a transparent canvas.</desc>
+  <path fill="#F4EDE3" d="m304 240 128 83c-38 71-58 154-58 250s20 179 58 250l-128 83V240Z"/>
+  <path fill="#F4EDE3" d="m720 240-128 83c38 71 58 154 58 250s-20 179-58 250l128 83V240Z"/>
+  <circle cx="512" cy="573" r="51" fill="#A73550"/>
+</svg>

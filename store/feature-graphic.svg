@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 500" role="img" aria-labelledby="title desc">
+  <title id="title">Milte Google Play feature graphic</title>
+  <desc id="desc">Milte logo and meet-for-real promise using the meeting-point identity.</desc>
+  <rect width="1024" height="500" fill="#F4EDE3"/>
+  <path fill="#0B0A0D" d="M-42-12 202 146c-73 134-110 293-110 476S129 964 202 1098L-42 1256V-12Z"/>
+  <path fill="#0B0A0D" d="m1066-12-244 158c73 134 110 293 110 476s-37 342-110 476l244 158V-12Z"/>
+  <circle cx="512" cy="250" r="42" fill="#A73550"/>
+  <text x="512" y="203" text-anchor="middle" fill="#0B0A0D" font-family="'DM Sans', Arial, sans-serif" font-size="118" font-weight="700" letter-spacing="-6">milte</text>
+  <text x="512" y="326" text-anchor="middle" fill="#0B0A0D" font-family="'DM Sans', Arial, sans-serif" font-size="42" font-weight="500" letter-spacing="-1">meet for real<tspan fill="#A73550">.</tspan></text>
+  <text x="512" y="404" text-anchor="middle" fill="#5D5559" font-family="'DM Sans', Arial, sans-serif" font-size="18" font-weight="700" letter-spacing="4">ONE PERSON · ONE PLACE · ONE HOUR</text>
+</svg>

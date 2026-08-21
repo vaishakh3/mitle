@@ -11,6 +11,9 @@ import { upsertProfile } from './api';
 export async function registerPushToken(): Promise<void> {
   try {
     if (!Device.isDevice) return;
+    const projectId =
+      Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+    if (!projectId) return;
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
         name: 'default',
@@ -23,9 +26,6 @@ export async function registerPushToken(): Promise<void> {
       ({ status } = await Notifications.requestPermissionsAsync());
     }
     if (status !== 'granted') return;
-    const projectId =
-      Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
-    if (!projectId) return; // Expo Go / no EAS project yet
     const token = await Notifications.getExpoPushTokenAsync({ projectId });
     await upsertProfile({ expo_push_token: token.data });
   } catch {

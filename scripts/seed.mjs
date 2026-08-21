@@ -12,13 +12,13 @@ const db = createClient(url, serviceKey, { auth: { persistSession: false } });
 const CENTER = { lat: 12.9716, lng: 77.5946 };
 
 const SEED_USERS = [
-  { email: 'asha@test.dev', name: 'Asha', gender: 'woman', birthdate: '1998-04-12', into: ['man'], interests: ['coffee', 'books', 'film'] },
-  { email: 'meera@test.dev', name: 'Meera', gender: 'woman', birthdate: '1996-11-02', into: ['man', 'woman'], interests: ['music', 'art', 'coffee'] },
-  { email: 'diya@test.dev', name: 'Diya', gender: 'woman', birthdate: '2000-01-25', into: ['man'], interests: ['hiking', 'nature', 'photography'] },
-  { email: 'rohan@test.dev', name: 'Rohan', gender: 'man', birthdate: '1995-07-19', into: ['woman'], interests: ['coffee', 'books', 'startups'] },
-  { email: 'arjun@test.dev', name: 'Arjun', gender: 'man', birthdate: '1997-09-30', into: ['woman'], interests: ['music', 'film', 'comedy'] },
-  { email: 'kabir@test.dev', name: 'Kabir', gender: 'man', birthdate: '1999-03-08', into: ['woman', 'nonbinary'], interests: ['hiking', 'fitness', 'travel'] },
-  { email: 'sam@test.dev', name: 'Sam', gender: 'nonbinary', birthdate: '1998-12-14', into: ['nonbinary', 'man'], interests: ['art', 'writing', 'coffee'] },
+  { email: 'asha@test.dev', name: 'Asha', gender: 'woman', birthdate: '1998-04-12', into: ['man'], interests: ['coffee', 'books', 'film'], intent: 'long_term', energy: 'quiet', style: 'coffee', budget: 1 },
+  { email: 'meera@test.dev', name: 'Meera', gender: 'woman', birthdate: '1996-11-02', into: ['man', 'woman'], interests: ['music', 'art', 'coffee'], intent: 'open', energy: 'lively', style: 'activity', budget: 2 },
+  { email: 'diya@test.dev', name: 'Diya', gender: 'woman', birthdate: '2000-01-25', into: ['man'], interests: ['hiking', 'nature', 'photography'], intent: 'figuring_out', energy: 'balanced', style: 'sober', budget: 1 },
+  { email: 'rohan@test.dev', name: 'Rohan', gender: 'man', birthdate: '1995-07-19', into: ['woman'], interests: ['coffee', 'books', 'startups'], intent: 'long_term', energy: 'quiet', style: 'coffee', budget: 1 },
+  { email: 'arjun@test.dev', name: 'Arjun', gender: 'man', birthdate: '1997-09-30', into: ['woman'], interests: ['music', 'film', 'comedy'], intent: 'open', energy: 'lively', style: 'activity', budget: 2 },
+  { email: 'kabir@test.dev', name: 'Kabir', gender: 'man', birthdate: '1999-03-08', into: ['woman', 'nonbinary'], interests: ['hiking', 'fitness', 'travel'], intent: 'figuring_out', energy: 'balanced', style: 'sober', budget: 1 },
+  { email: 'sam@test.dev', name: 'Sam', gender: 'nonbinary', birthdate: '1998-12-14', into: ['nonbinary', 'man'], interests: ['art', 'writing', 'coffee'], intent: 'open', energy: 'balanced', style: 'anything', budget: 2 },
 ];
 
 const HINTS = [
@@ -76,6 +76,10 @@ for (let i = 0; i < SEED_USERS.length; i++) {
     age_min: 21,
     age_max: 40,
     radius_km: 25,
+    relationship_intent: u.intent,
+    social_energy: u.energy,
+    date_style: u.style,
+    budget_level: u.budget,
   });
   if (prErr) throw prErr;
 

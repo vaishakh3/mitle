@@ -1,0 +1,1 @@
+Milte 1.0 introduces one private daily possibility with mutual boundaries, a native date-of-birth calendar, safer approximate-location handling, named public-place selection, 24-hour confirmation, day-of signals, confidential reports, a mutual Second Chapter, and in-app account deletion. No feed. Meet for real.

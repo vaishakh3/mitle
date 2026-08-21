@@ -2,6 +2,9 @@
 // unit-tested with vitest and imported by Supabase edge functions alike.
 
 export type Gender = 'man' | 'woman' | 'nonbinary';
+export type RelationshipIntent = 'long_term' | 'open' | 'figuring_out';
+export type SocialEnergy = 'quiet' | 'balanced' | 'lively';
+export type DateStyle = 'coffee' | 'activity' | 'sober' | 'anything';
 
 export interface Candidate {
   userId: string;
@@ -14,6 +17,10 @@ export interface Candidate {
   ageMax: number;
   radiusKm: number;
   interests: string[];
+  relationshipIntent: RelationshipIntent;
+  socialEnergy: SocialEnergy;
+  dateStyle: DateStyle;
+  budgetLevel: number;
 }
 
 export interface ScoredPair {
@@ -22,11 +29,12 @@ export interface ScoredPair {
   score: number;
 }
 
-// Serendipity-heavy weights: random jitter dominates so matches feel like
-// fate, not optimization. Interest overlap and proximity nudge, not decide.
-const W_INTERESTS = 0.35;
-const W_DISTANCE = 0.25;
-const W_RANDOM = 0.4;
+// Private compatibility now has real influence, but chance remains a joint
+// top-weight so a member never feels reduced to a deterministic ranking.
+const W_INTERESTS = 0.2;
+const W_DISTANCE = 0.2;
+const W_COMPATIBILITY = 0.3;
+const W_RANDOM = 0.3;
 
 export function pairKey(a: string, b: string): string {
   return a < b ? `${a}:${b}` : `${b}:${a}`;
@@ -79,11 +87,45 @@ function jaccard(a: string[], b: string[]): number {
   return union === 0 ? 0 : inter / union;
 }
 
+function intentSimilarity(a: RelationshipIntent, b: RelationshipIntent): number {
+  if (a === b) return 1;
+  if (a === 'open' || b === 'open') return 0.72;
+  return 0.3;
+}
+
+function energySimilarity(a: SocialEnergy, b: SocialEnergy): number {
+  if (a === b) return 1;
+  if (a === 'balanced' || b === 'balanced') return 0.72;
+  return 0.35;
+}
+
+function styleSimilarity(a: DateStyle, b: DateStyle): number {
+  if (a === b) return 1;
+  if (a === 'anything' || b === 'anything') return 0.82;
+  if ((a === 'sober' && b === 'coffee') || (a === 'coffee' && b === 'sober')) return 0.78;
+  return 0.4;
+}
+
+/** Private alignment used only for pairing; none of these answers are revealed. */
+export function privateCompatibility(a: Candidate, b: Candidate): number {
+  const budgetSimilarity = 1 - Math.min(Math.abs(a.budgetLevel - b.budgetLevel), 2) / 2;
+  return (
+    intentSimilarity(a.relationshipIntent, b.relationshipIntent)
+    + energySimilarity(a.socialEnergy, b.socialEnergy)
+    + styleSimilarity(a.dateStyle, b.dateStyle)
+    + budgetSimilarity
+  ) / 4;
+}
+
 export function scorePair(a: Candidate, b: Candidate, rng: () => number): number {
   const interestScore = jaccard(a.interests, b.interests);
   const maxDist = Math.min(a.radiusKm, b.radiusKm);
   const distanceScore = 1 - Math.min(haversineKm(a, b) / maxDist, 1);
-  return W_INTERESTS * interestScore + W_DISTANCE * distanceScore + W_RANDOM * rng();
+  const compatibilityScore = privateCompatibility(a, b);
+  return W_INTERESTS * interestScore
+    + W_DISTANCE * distanceScore
+    + W_COMPATIBILITY * compatibilityScore
+    + W_RANDOM * rng();
 }
 
 function shuffle<T>(arr: T[], rng: () => number): T[] {

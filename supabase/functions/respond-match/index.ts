@@ -6,6 +6,24 @@ import { sendPush } from '../_shared/push.ts';
 import { nextEveningWindow } from '../_shared/time.ts';
 import { pickVenue } from '../_shared/venues.ts';
 
+const MEETING_PHRASES = [
+  'paper moon',
+  'violet hour',
+  'second chapter',
+  'lucky comet',
+  'quiet thunder',
+  'orange blossom',
+  'midnight postcard',
+  'borrowed sunlight',
+  'tiny rebellion',
+  'blue umbrella',
+];
+
+function randomMeetingPhrase(): string {
+  const value = crypto.getRandomValues(new Uint32Array(1))[0];
+  return MEETING_PHRASES[value % MEETING_PHRASES.length];
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405);
   const user = await userFromRequest(req);
@@ -72,16 +90,30 @@ Deno.serve(async (req) => {
   // Both accepted: commit. Pick the venue near their midpoint & set the window.
   const { data: people, error: pErr } = await db
     .from('profiles')
-    .select('user_id, lat, lng, expo_push_token')
+    .select('user_id, lat, lng, expo_push_token, preferences(preferred_hour, budget_level)')
     .in('user_id', [match.user_a, match.user_b]);
   if (pErr || !people || people.length !== 2) {
     return json({ error: 'could not load participants' }, 500);
   }
   const [pa, pb] = people;
   const mid = midpoint({ lat: pa.lat, lng: pa.lng }, { lat: pb.lat, lng: pb.lng });
-  const venue = await pickVenue(mid.lat, mid.lng, Deno.env.get('GOOGLE_PLACES_API_KEY'));
   const tz = Deno.env.get('MEETCUTE_TZ') ?? 'Asia/Kolkata';
-  const window = nextEveningWindow(tz);
+  const privatePreferences = people.map((person) => {
+    const prefs = Array.isArray(person.preferences) ? person.preferences[0] : person.preferences;
+    return {
+      hour: prefs?.preferred_hour ?? 18,
+      budget: prefs?.budget_level ?? 2,
+    };
+  });
+  const meetHour = Math.round((privatePreferences[0].hour + privatePreferences[1].hour) / 2);
+  const budgetLevel = Math.round((privatePreferences[0].budget + privatePreferences[1].budget) / 2);
+  const venue = await pickVenue(
+    mid.lat,
+    mid.lng,
+    Deno.env.get('GOOGLE_PLACES_API_KEY'),
+    budgetLevel,
+  );
+  const window = nextEveningWindow(tz, meetHour);
 
   // Commit exactly once: only the transition from the other-accepted state
   // wins; a racing second committer matches 0 rows and returns quietly.
@@ -96,6 +128,7 @@ Deno.serve(async (req) => {
       venue_maps_url: venue.mapsUrl,
       window_start: window.start.toISOString(),
       window_end: window.end.toISOString(),
+      meeting_phrase: randomMeetingPhrase(),
     })
     .eq('id', match.id)
     .eq('status', isA ? 'accepted_b' : 'accepted_a')
