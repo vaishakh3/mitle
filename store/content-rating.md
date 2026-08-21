@@ -10,3 +10,5 @@
 - Account creation: passwordless email OTP.
 - Account deletion: available inside the app.
 - App access for review: a dedicated controlled reviewer account exists and reusable sign-in instructions are saved in Play Console. No inbox or OTP access is required by the reviewer.
+- Google Play IARC result: Mature 17+ in North America and the corresponding mostly 18+ regional ratings; the questionnaire and IARC Terms acceptance are saved in Play Console.
+- Child safety: Milte is 18+ only, publishes zero-tolerance child sexual abuse and exploitation standards at `/child-safety`, accepts confidential in-app reports, preserves relevant evidence, restricts implicated accounts, and escalates reportable matters to appropriate regional or national authorities.

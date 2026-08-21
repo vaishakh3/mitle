@@ -30,6 +30,7 @@ Milte is machine-ready when every non-human item below is checked, the verificat
 ## Trust, safety, privacy, and policy
 
 - [x] Terms, Privacy, Community Rules, Safety, Support, deletion instructions, and account-review routes exist and are linked.
+- [x] Publish the 18+ child-safety standards on the first-party web origin and in-app, with zero-tolerance child sexual abuse/exploitation rules, confidential reporting routes, emergency guidance, evidence preservation, and authority escalation.
 - [x] Onboarding requires versioned 18+, Terms, Privacy, Community Rules, and safety acknowledgements.
 - [x] Reporting ends the match, prevents re-matching, keeps reports confidential, and documents India 112 escalation.
 - [x] Location and push-token lifetimes, profile deletion, match history, feedback, support, reports, and safety-hold retention are explicit and machine-enforced where applicable.
@@ -55,7 +56,7 @@ Milte is machine-ready when every non-human item below is checked, the verificat
 
 ## Android and Play package
 
-- [x] Final package/scheme is `app.milte` / `milte://`; version is `1.0.0` (3); min/target SDKs are 24/36.
+- [x] Final package/scheme is `app.milte` / `milte://`; version is `1.0.0` (4); min/target SDKs are 24/36.
 - [x] Continuous Native Generation, local release signing, R8/resource shrinking, disabled backup/cleartext, and `arm64-v8a`/`x86_64` are configured.
 - [x] The RSA-4096 Milte upload key is outside Git and its certificate fingerprint is recorded.
 - [x] A clean signing preflight produced an installable Milte APK/AAB and passed package, signature, ABI, permission, and 16 KB alignment inspection.
@@ -63,13 +64,14 @@ Milte is machine-ready when every non-human item below is checked, the verificat
 - [x] Play accepted and published version code 3 to internal testing with reviewer access and release notes.
 - [x] Save Dating as the Play category and reconcile the live Data Safety declaration to approximate-location-only.
 - [x] Target Alpha closed testing to India and prepare the Play-processed version 3 bundle and release notes through the closed-release preview gate.
+- [x] Complete Play's child-safety declaration with the live first-party standards URL and the public safety contact, including the authorised in-app reporting and statutory-reporting attestations.
 - [x] Rebuild APK/AAB after the Milte AWS endpoint cutover and freeze final sizes, hashes, signature, permission/ABI/alignment checks, secret scan, and source-map inspection.
 - [x] Complete trusted bundletool validation with the SHA-256-verified official Google 1.18.3 release.
-- [x] Fresh-install the exact final APK on API 24 and API 36; reviewer authentication passes on both, API 24 proves the native DOB calendar, and API 36 proves the approximate-location-only OS dialog. Five current Milte screenshots are uploaded to Play.
+- [x] Install and cold-launch the exact version 4 APK on API 24 and API 36, open the complete child-safety deep link on both, and retain the earlier version 3 reviewer-authentication, native DOB calendar, approximate-location-only OS-dialog, and five Play screenshot evidence.
 
 ## Verification matrix
 
-- [x] Final `npm run release:verify`
+- [x] Final `npm run release:verify` (65 root tests and 25 isolated backend tests pass for version 4).
 - [x] Final dependency audit and bounded waiver review: root/Lambda report zero; mobile reports 16 non-runtime Expo/Metro/config build-tool advisories documented in `DEPENDENCY_RISK.md`; no critical or compatible fixed set exists. Official bundletool is checksum-pinned outside the repository.
 - [x] Final APK `apksigner`, `apkanalyzer`, `zipalign -P 16`, ABI/ELF, source-map, and secret inspection
 - [x] Final AAB `jarsigner` and checksum-pinned official bundletool validation

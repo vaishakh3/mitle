@@ -28,6 +28,6 @@ Keep the application ID `app.milte`; a web domain can change later without forci
 - Put the registrant account and recovery email under owner-controlled credentials.
 - Use Route 53 DNS and an ACM certificate in `us-east-1` for CloudFront after purchase.
 - Redirect secondary domains to the canonical one; do not split SEO or policy URLs.
-- Publish `/privacy`, `/terms`, `/support`, and `/delete-account` before entering the domain in Play Console.
+- Publish `/privacy`, `/terms`, `/support`, `/delete-account`, and `/child-safety` before entering the domain in Play Console.
 
 No domain was purchased during engineering. Buying one is a financial/ownership handoff, not a blocker for the CloudFront-hosted release candidate.

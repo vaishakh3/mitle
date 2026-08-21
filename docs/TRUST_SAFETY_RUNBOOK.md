@@ -38,12 +38,14 @@ Milte creates real-world introductions. Automated controls reduce exposure; a na
 
 - Immediate danger: direct the person to 112, local emergency services, venue staff, and a trusted person. Milte cannot dispatch help.
 - Credible threat, stalking, coercion, exploitation, or serious violence: suspend, preserve evidence, notify the safety lead, and follow counsel-approved law-enforcement handling.
+- Suspected child sexual abuse or exploitation: immediately restrict implicated accounts, preserve only necessary records under access controls, do not download or redistribute suspected illegal imagery, notify the safety lead and counsel, and make legally required reports to the appropriate regional or national authority. Record the authority, report reference, time, scope, and operator in the private incident log.
 - Law-enforcement requests: verify authority and scope, preserve the request, involve counsel, disclose only what is legally required, and log every disclosure.
 - Self-harm or medical content: do not present Milte as a crisis service; provide local emergency options and escalate under the approved policy.
 
 ## Abuse cases to rehearse
 
 - OTP floods and account enumeration;
+- under-age access, age misrepresentation, grooming, sextortion, child sexual abuse material, and trafficking indicators;
 - multiple accounts and suspension evasion;
 - spoofed or stale location;
 - malicious spot hints or post-meet notes;

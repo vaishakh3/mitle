@@ -12,7 +12,7 @@ Recorded 2026-08-21 in Asia/Kolkata. This is an evidence log, not a substitute f
 ## Automated verification
 
 - Root, mobile, and Lambda TypeScript checks pass.
-- Root suite: 64/64 tests passed; isolated Lambda suite: 25/25 tests passed.
+- Root suite: 65/65 tests passed; isolated Lambda suite: 25/25 tests passed.
 - Expo dependency alignment and Expo Doctor pass.
 - Expo web export passes and contains the Milte symbol and font set.
 - SAM lint validation and a parallel SAM build pass.
@@ -23,7 +23,7 @@ Recorded 2026-08-21 in Asia/Kolkata. This is an evidence log, not a substitute f
 
 The endpoint-bound clean build completed 2026-08-21 and produced the signed APK and Play AAB from one generated native tree.
 
-- Package `app.milte`; version `1.0.0` (3); min SDK 24; target SDK 36.
+- Package `app.milte`; version `1.0.0` (4); min SDK 24; target SDK 36.
 - Exactly `arm64-v8a` and `x86_64` native libraries.
 - APK verifies with Android Signature Scheme v2 and one RSA-4096 signer.
 - Signer: `CN=Milte Upload, OU=Release Engineering, O=Milte, C=IN`.
@@ -32,12 +32,12 @@ The endpoint-bound clean build completed 2026-08-21 and produced the signed APK 
 - Latitude and longitude are rounded on-device to three decimal places before API transmission.
 - Date of birth uses a native Android calendar constrained to ages 18–99.
 - 16 KB zip alignment passes.
-- APK: 54,282,588 bytes; SHA-256 `7d85aa6c1fe7fa3321b7dcc1e585f7f2e750df23b0e8300b7caefe6be097a3bc`.
-- AAB: 41,512,268 bytes; SHA-256 `50eb7d2933c0c09a54c93d2dfe859b2782a43fe3de4c793015db55a1fd523c89`.
+- APK: 54,287,640 bytes; SHA-256 `e6bad57d9eede22caf7916ffeec227ec12eb14bb1e07b61c5f83de11032e54b6`.
+- AAB: 41,514,305 bytes; SHA-256 `8cf57e8c6df66cadb95f07986e2febb7e033b12738ca7e28c8bf2a62e7892868`.
 - APK/AAB signatures, package metadata, ABIs, 16 KB alignment, permission policy, source-map scan, and private-secret scan pass in `npm run android:inspect`.
 - Google bundletool 1.18.3 was downloaded from the official release, verified against GitHub's published SHA-256 `a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29`, and validated the final AAB successfully.
-- The API 24 emulator fresh-installed version 3. Native DOB calendar limits, sign-out, reviewer password sign-in, authenticated routing to Today, and the location-required recovery state pass with no fatal React Native, Metro, or localhost log.
-- The API 36 emulator fresh-installed version 3, cold-launched in 1.222 seconds, rendered the 1080×2400 launch screen, authenticated the reviewer account into Today, and showed Android's approximate-location-only permission dialog. The fatal/React Native/Metro/localhost scan was clean.
+- The API 24 emulator installed the exact version 4 APK, resolved `app.milte/.MainActivity`, launched successfully, rendered the location-recovery state, opened `milte://child-safety`, and exposed the complete 18+ zero-tolerance standards to Android accessibility. The fatal/React Native/Metro/localhost scan was clean. The earlier authenticated version 3 pass remains the evidence for native DOB calendar limits, sign-out, reviewer password sign-in, and Today routing.
+- The API 36 emulator installed the exact version 4 APK, cold-launched successfully, and opened the complete child-safety route with a clean fatal/React Native/Metro/localhost scan. The earlier authenticated version 3 pass remains the evidence for the 1080×2400 launch screen, Today routing, and Android's approximate-location-only permission dialog.
 - A physical-device pass remains open in the readiness matrix.
 
 ## AWS production evidence
@@ -48,7 +48,7 @@ The endpoint-bound clean build completed 2026-08-21 and produced the signed APK 
 - DynamoDB table `milte-live`; S3 bucket `milte-live-web-172800116877`; CloudFront distribution `E2S0ADXZ560DJM`.
 - Web invalidation `IASY5YB5HUFRWYKSGXVL2WVNCO` completed after the source-frozen export.
 - `/health` returned `200`, `service: milte`, `Cache-Control: no-store`, and the exact CloudFront origin in `Access-Control-Allow-Origin`. A disallowed-origin preflight returned no allow-origin header.
-- `/`, `/privacy`, `/terms`, `/support`, and `/delete-account` returned `200` through CloudFront.
+- `/`, `/privacy`, `/terms`, `/support`, `/delete-account`, and `/child-safety` returned `200` through CloudFront.
 - CloudFront serves HSTS, CSP, frame denial, MIME sniff protection, strict referrer policy, and a restrictive permissions policy. The private S3 origin uses AES-256 encryption, versioning, and all four public-access blocks.
 - DynamoDB is active/on-demand with SSE, TTL on `expiresAt`, PITR, and deletion protection enabled.
 - Daily matching is enabled for `08:00 Asia/Kolkata`; housekeeping is enabled every 15 minutes. Both have two retries, bounded event age, and DLQs.
@@ -60,7 +60,7 @@ The endpoint-bound clean build completed 2026-08-21 and produced the signed APK 
 
 - Physical Android verification.
 - Operational support/alert inbox, SES sender migration, FCM notification delivery, legal review, safety operator, and invite-only safety pilot.
-- Google Play public contact and IARC legal declarations, plus the personal-account closed-test gate (12 opted-in testers for 14 continuous days) before applying for production access.
+- The personal-account closed-test gate (at least 12 opted-in testers for 14 continuous days) before applying for production access.
 
 ## Google Play evidence
 
@@ -68,5 +68,7 @@ The endpoint-bound clean build completed 2026-08-21 and produced the signed APK 
 - Version code 3 passed Play bundle processing with API 24+, target 36, four screen layouts, two ABIs, and three required features.
 - Internal release `1.0.0 (3) — reviewer access` was published on 2026-08-21 and is marked **Available to internal testers**. It is inactive only because no internal tester list has been supplied.
 - Play App Signing and Automatic Protection are active. The store listing, AI-asset labels, five phone screenshots, app icon, feature graphic, privacy policy, reviewer access, Ads, 18+ target audience, Data Safety, Government, Financial, Health, and Advertising ID declarations are saved. Data Safety reports approximate location only, matching the device-rounded implementation.
-- The application category is saved as Dating. The remaining app-setup work is the public store-contact email and IARC content rating; both require owner approval because the former is public and the latter includes legal acceptance. The production button is disabled until a closed release exists and at least 12 testers have stayed opted in continuously for 14 days.
-- The Alpha closed-testing track targets India. Release `1.0.0 (3) — closed India pilot` reuses the Play-processed version 3 bundle and has complete English release notes. Play's preview reports the expected 15.8 MB new-install delivery size and blocks saving/publishing only with `Complete the steps listed on the Dashboard`; the public contact and IARC declarations therefore gate this otherwise-prepared release.
+- The public store contact is `vaishakhsuresh3@gmail.com`; the public website uses the HTTPS CloudFront origin. The IARC questionnaire and Terms acceptance are saved, with Mature 17+ in North America and the corresponding mostly 18+ regional ratings.
+- Milte's first-party child-safety standards are live at `/child-safety`. Play's child-safety declaration is saved with the public safety contact, in-app reporting, relevant-law compliance, and authority-reporting attestations.
+- The application category is Dating. The production button remains gated until a closed release exists and at least 12 testers have stayed opted in continuously for 14 days.
+- The Alpha closed-testing track targets India and has the existing 25-address `Testers` list selected, with feedback routed to `vaishakhsuresh3@gmail.com`. The version 4 AAB is locally frozen and awaits replacement of the older version 3 closed-track draft in Play Console.

@@ -16,6 +16,7 @@ Milte is designed to operate without café approvals, venue partnerships, third-
 - [x] Public-place selection uses current Amazon Location data and never invents a midpoint venue.
 - [x] Reporting ends an active match, blocks re-matching, preserves confidential evidence, and offers India 112 guidance.
 - [x] Account deletion, correction, support, retention, Terms, Privacy, Community Rules, and safety information are available in-app and on public routes.
+- [x] Publish first-party child-safety standards and save Play's child-safety reporting, compliance, and public-contact declaration.
 - [x] Matching uses mutual age/gender/distance/day boundaries; no photo, bio, follower, desirability, or engagement score exists.
 - [x] Location is approximate foreground-only and expires from active use; venue and recognition details are revealed only after two private yeses.
 - [ ] Name a trained report-review owner with urgent/non-urgent response targets.
@@ -38,7 +39,7 @@ Milte is designed to operate without café approvals, venue partnerships, third-
 - [x] Publish version code 3 to the internal track with controlled reviewer access, release notes, and the full visual store listing.
 - [x] Set the Play application category to Dating and reconcile Data Safety to approximate-location-only.
 - [x] Target the Alpha closed-test track to India and prepare version code 3 with complete release notes; Play validation reaches preview.
-- [ ] Supply and publish the public support email, then complete the IARC content-rating questionnaire and legal acceptance.
+- [x] Publish the public support email and complete the IARC content-rating questionnaire and legal acceptance.
 - [ ] If required for the account type, complete the current closed-testing period with the required tester count.
 - [ ] Back up and recovery-test the JKS/password outside this workstation.
 - [ ] Approve the final listing and release only after infrastructure, safety-operator, legal, physical-device, and pilot gates are green.

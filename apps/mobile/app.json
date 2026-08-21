@@ -13,7 +13,7 @@
     },
     "android": {
       "package": "app.milte",
-      "versionCode": 3,
+      "versionCode": 4,
       "allowBackup": false,
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [

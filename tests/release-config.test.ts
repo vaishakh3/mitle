@@ -21,10 +21,22 @@ describe('Play review release configuration', () => {
     const appConfig = JSON.parse(fs.readFileSync(path.join(repositoryRoot, 'apps/mobile/app.json'), 'utf8'));
     const authSource = fs.readFileSync(path.join(repositoryRoot, 'apps/mobile/lib/auth.tsx'), 'utf8');
 
-    expect(appConfig.expo.android.versionCode).toBe(3);
+    expect(appConfig.expo.android.versionCode).toBe(4);
     expect(appConfig.expo.extra.playReviewEmail).toBe('play-review@milte.app');
     expect(JSON.stringify(appConfig)).not.toMatch(/reviewPassword|playReviewPassword/i);
     expect(authSource).toContain("PREFERRED_CHALLENGE: 'PASSWORD'");
+  });
+
+  it('publishes the required child-safety standards and in-app report paths', () => {
+    const standards = fs.readFileSync(path.join(repositoryRoot, 'apps/mobile/app/child-safety.tsx'), 'utf8');
+    const settings = fs.readFileSync(path.join(repositoryRoot, 'apps/mobile/app/settings.tsx'), 'utf8');
+
+    expect(standards).toMatch(/child sexual abuse material/i);
+    expect(standards).toMatch(/grooming/i);
+    expect(standards).toMatch(/regional or national authorities/i);
+    expect(standards).toContain("router.push('/safety')");
+    expect(standards).toContain("router.push('/support')");
+    expect(settings).toContain("router.push('/child-safety')");
   });
 });
 

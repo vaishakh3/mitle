@@ -22,7 +22,8 @@ export default function CommunityRules() {
           <Rule mark="03" title="Protect anonymity" body="Do not investigate, photograph, record, follow, publish, or share identifying details about a match without clear permission." />
           <Rule mark="04" title="No hate, harassment, or coercion" body="Threats, intimidation, sexual pressure, discriminatory conduct, repeated unwanted contact, stalking, and retaliation are prohibited." />
           <Rule mark="05" title="No scams or solicitation" body="Do not request money, sell services, recruit, promote, or use Milte for fraud, trafficking, or any illegal purpose." />
-          <Rule mark="06" title="Leave cleanly" body="If you cannot attend, use the day-of status. If you feel uncomfortable, leave. Do not punish or pursue someone for declining or reporting." />
+          <Rule mark="06" title="Adults only; no child exploitation" body="Anyone under 18 is prohibited. Child sexual abuse material, grooming, sextortion, sexual solicitation of minors, trafficking, and any facilitation of child exploitation are forbidden." />
+          <Rule mark="07" title="Leave cleanly" body="If you cannot attend, use the day-of status. If you feel uncomfortable, leave. Do not punish or pursue someone for declining or reporting." />
         </Card>
 
         <View style={{ gap: spacing.sm }}><Label>What happens after a report</Label><Card style={{ gap: spacing.md }}>

@@ -227,6 +227,8 @@ export default function Settings() {
           <Divider />
           <SettingsLink title="Community Rules" body="Consent, respect, and easy exits." onPress={() => router.push('/community')} />
           <Divider />
+          <SettingsLink title="Child safety standards" body="18+ access and zero-tolerance rules." onPress={() => router.push('/child-safety')} />
+          <Divider />
           <SettingsLink title="Support" body="Account, privacy, safety, or technical help." onPress={() => router.push('/support')} />
         </Card></View>
 
