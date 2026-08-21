@@ -42,7 +42,7 @@ The endpoint-bound clean build completed 2026-08-21 and produced the signed APK 
 
 ## AWS production evidence
 
-- AWS account `172800116877`, region `ap-south-1`, stack `milte-live`; stack state `UPDATE_COMPLETE`, last update `2026-08-21T06:33:35.686Z`, termination protection enabled.
+- AWS account `172800116877`, region `ap-south-1`, stack `milte-live`; stack state `UPDATE_COMPLETE`, last update `2026-08-21T08:37:58.887Z`, termination protection enabled.
 - API `https://5t32c9fq3l.execute-api.ap-south-1.amazonaws.com`; CloudFront `https://d1w5h7ki7ldbx2.cloudfront.net`.
 - Cognito pool `ap-south-1_bFAaQYQW4`; client `6ft7n93nre2r7gq9kge7e184qf`; Cognito deletion protection active.
 - DynamoDB table `milte-live`; S3 bucket `milte-live-web-172800116877`; CloudFront distribution `E2S0ADXZ560DJM`.
@@ -53,13 +53,14 @@ The endpoint-bound clean build completed 2026-08-21 and produced the signed APK 
 - DynamoDB is active/on-demand with SSE, TTL on `expiresAt`, PITR, and deletion protection enabled.
 - Daily matching is enabled for `08:00 Asia/Kolkata`; housekeeping is enabled every 15 minutes. Both have two retries, bounded event age, and DLQs.
 - Lambda and API logs retain 30 days. All six Milte CloudWatch alarms reported `OK` with actions enabled.
+- The confirmed SNS operations subscription delivers alarm notifications to `vaishakhsuresh3@gmail.com`. The `milte-live-monthly` USD 10 cost budget is active with the committed address preserved in `samconfig.toml`.
 - A public support canary created and persisted `MI-975AD90A`; its ticket and canary-only rate record were removed after verification. Direct housekeeping invocation returned `expired: 0`, `completed: 0`, `reminded: 0` without a function error.
 - The CloudFront distribution is deployed, enabled, HTTP/2+HTTP/3, and PriceClass 100.
 
 ## Open external/human evidence
 
 - Physical Android verification.
-- Operational support/alert inbox, SES sender migration, FCM notification delivery, legal review, safety operator, and invite-only safety pilot.
+- SES sender migration, FCM notification delivery, legal review, safety operator, and invite-only safety pilot.
 - The personal-account closed-test gate (at least 12 opted-in testers for 14 continuous days) before applying for production access.
 
 ## Google Play evidence
@@ -71,4 +72,6 @@ The endpoint-bound clean build completed 2026-08-21 and produced the signed APK 
 - The public store contact is `vaishakhsuresh3@gmail.com`; the public website uses the HTTPS CloudFront origin. The IARC questionnaire and Terms acceptance are saved, with Mature 17+ in North America and the corresponding mostly 18+ regional ratings.
 - Milte's first-party child-safety standards are live at `/child-safety`. Play's child-safety declaration is saved with the public safety contact, in-app reporting, relevant-law compliance, and authority-reporting attestations.
 - The application category is Dating. The production button remains gated until a closed release exists and at least 12 testers have stayed opted in continuously for 14 days.
-- The Alpha closed-testing track targets India and has the existing 25-address `Testers` list selected, with feedback routed to `vaishakhsuresh3@gmail.com`. The version 4 AAB is locally frozen and awaits replacement of the older version 3 closed-track draft in Play Console.
+- The Alpha closed-testing track targets India and has the existing 25-address `Testers` list selected, with feedback routed to `vaishakhsuresh3@gmail.com`.
+- Play processed version code 4 with API 24+, target 36, four screen layouts, two ABIs, three required features, 8,608 supported phones, zero supported-device loss, and a 15.8 MB new-install delivery size. Release `1.0.0 (4) — closed India pilot` excludes version 3 and uses the frozen English notes and 100% closed-test rollout.
+- All 14 consolidated changes were sent to Google. Publishing overview shows **Changes in review** while automated quick checks finish; Play states that successful checks feed the review queue automatically and that reviews are typically completed within seven days, but may take longer.

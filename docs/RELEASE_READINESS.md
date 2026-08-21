@@ -65,6 +65,7 @@ Milte is machine-ready when every non-human item below is checked, the verificat
 - [x] Save Dating as the Play category and reconcile the live Data Safety declaration to approximate-location-only.
 - [x] Target Alpha closed testing to India and prepare the Play-processed version 3 bundle and release notes through the closed-release preview gate.
 - [x] Complete Play's child-safety declaration with the live first-party standards URL and the public safety contact, including the authorised in-app reporting and statutory-reporting attestations.
+- [x] Upload and process version code 4, replace the Alpha release with the frozen AAB, and submit the consolidated listing, declarations, India targeting, tester list, and release changes to Play review.
 - [x] Rebuild APK/AAB after the Milte AWS endpoint cutover and freeze final sizes, hashes, signature, permission/ABI/alignment checks, secret scan, and source-map inspection.
 - [x] Complete trusted bundletool validation with the SHA-256-verified official Google 1.18.3 release.
 - [x] Install and cold-launch the exact version 4 APK on API 24 and API 36, open the complete child-safety deep link on both, and retain the earlier version 3 reviewer-authentication, native DOB calendar, approximate-location-only OS-dialog, and five Play screenshot evidence.
@@ -85,8 +86,9 @@ Milte is machine-ready when every non-human item below is checked, the verificat
 - [ ] Qualified counsel approves Terms, Privacy, consent, retention, and launch-market language.
 - [x] The owner purchased and identity-verified the Google Play developer account and created the `app.milte` app.
 - [ ] The account completes any current closed-testing requirement before production access.
-- [ ] The owner supplies and confirms an operational alert email and completes the SES sender cutover before public-volume sign-ups.
-- [ ] The owner supplies Expo/FCM/Play service-account credentials for physical notification testing and draft internal-track submission.
+- [x] The operations email is confirmed on the SNS topic; all six alarms target it and the USD 10 monthly budget notifications are active.
+- [ ] Complete the SES sender cutover before public-volume sign-ups after an owner-controlled domain is available.
+- [ ] The owner supplies Expo/FCM/Play service-account credentials for physical notification testing and future automated Play submissions.
 - [ ] A physical Android pass covers TalkBack, notifications, location, Maps, calendar, sharing, emergency dialer, and authenticated match/deletion.
 - [ ] The owner backs up and recovery-tests the upload key/password in encrypted storage they control.
 - [ ] An invite-only physical safety pilot passes its go/no-go review.

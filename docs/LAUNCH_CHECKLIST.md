@@ -8,7 +8,8 @@ Milte is designed to operate without café approvals, venue partnerships, third-
 - [x] Publish the source-frozen Milte web export, invalidate CloudFront, and bind exact API CORS to the new first-party origin.
 - [x] Verify DynamoDB PITR/TTL/SSE, S3 versioning/encryption/public blocks, 30-day logs, schedules, retries, DLQs, alarms, Cognito deletion protection, and API health.
 - [x] Run support persistence/cleanup and housekeeping canaries without retaining test data.
-- [ ] Supply an operational alert email, confirm SNS/Budget emails, and move Cognito from its default sender to verified SES before public-volume acquisition.
+- [x] Supply `vaishakhsuresh3@gmail.com` as the operations address, confirm the SNS subscription, attach all six alarms, and create the USD 10 monthly budget alerts.
+- [ ] Move Cognito from its controlled-beta default sender to verified SES before public-volume acquisition.
 - [ ] Configure the Expo project, FCM, and Play service account when those accounts exist; the local signed build remains the independent build path.
 
 ## Trust, safety, and privacy
@@ -38,7 +39,7 @@ Milte is designed to operate without café approvals, venue partnerships, third-
 - [x] Purchase and identity-verify the Play developer account and reserve `app.milte`.
 - [x] Publish version code 3 to the internal track with controlled reviewer access, release notes, and the full visual store listing.
 - [x] Set the Play application category to Dating and reconcile Data Safety to approximate-location-only.
-- [x] Target the Alpha closed-test track to India and prepare version code 3 with complete release notes; Play validation reaches preview.
+- [x] Target Alpha closed testing to India, process version code 4, select the 25-address tester list, and send the complete release and app-setup changes to Play review.
 - [x] Publish the public support email and complete the IARC content-rating questionnaire and legal acceptance.
 - [ ] If required for the account type, complete the current closed-testing period with the required tester count.
 - [ ] Back up and recovery-test the JKS/password outside this workstation.
