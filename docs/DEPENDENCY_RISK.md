@@ -1,11 +1,11 @@
 # Dependency risk record
 
-Audited 2026-08-21.
+Audited 2026-08-23.
 
 - Root application/test dependencies: 0 advisories.
 - AWS Lambda production dependencies: 0 advisories.
-- Expo mobile tree: 16 advisories (8 moderate, 8 high), all in the Node-based Expo/Metro/config/prebuild toolchain. There are no critical advisories and these packages are not embedded as executable Node tooling in the Android release artifact.
-- The high-severity `image-size` advisory has no published fixed version as of the audit (`2.0.2` is both current and affected). Metro/Expo compatible patched releases are not available.
-- `npm audit fix --force` proposes Expo 53, which is an incompatible downgrade from SDK 57/React Native 0.86 and would also lose the Android API 36 release baseline.
+- Expo mobile tree: 12 moderate advisories and zero high or critical advisories. Pinning `metro`, `metro-config`, and `metro-transform-worker` to `0.84.5` removed the former high-severity Metro/image processing findings without changing the Expo SDK 57 or React Native 0.86 compatibility baseline.
+- The remaining advisories are the `uuid <11.1.1` chain used by Expo's iOS Xcode/config build tooling. They are not part of Milte's Android JavaScript runtime or signed APK/AAB execution path.
+- `npm audit fix --force` proposes an incompatible Expo downgrade and does not provide a safe SDK-57-compatible resolution for the remaining build-tool chain.
 
-Decision: do not apply the invalid downgrade. Keep Expo packages on the SDK 57 compatibility set, run Expo Doctor and a clean signed build on every release, do not process untrusted image/build inputs in CI, and re-audit when Expo or Metro publishes compatible fixes. This waiver covers build-host availability risks only; any runtime or critical advisory reopens the release decision immediately.
+Decision: keep the compatible Metro override and do not apply the invalid Expo downgrade. Run Expo Doctor, the audit, and a clean signed build on every release; do not process untrusted build inputs in CI; and re-audit when Expo publishes a compatible `uuid` chain. This waiver covers iOS/build-host availability risk only. Any Android-runtime, high, or critical advisory reopens the release decision immediately.

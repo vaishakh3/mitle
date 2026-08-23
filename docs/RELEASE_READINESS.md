@@ -2,7 +2,7 @@
 
 This is the single source of truth for machine readiness. A box is checked only when repository or live-system evidence proves it. Human approvals remain explicit and do not hide unfinished engineering.
 
-Last audited: 2026-08-21 (Asia/Kolkata)
+Last audited: 2026-08-23 (Asia/Kolkata)
 
 ## Completion rule
 
@@ -19,7 +19,7 @@ Milte is machine-ready when every non-human item below is checked, the verificat
 
 ## Product correctness
 
-- [x] Passwordless email authentication has enumeration-resistant copy, resend cooldown, expiry guidance, token refresh, sign-out, and recoverable failures.
+- [x] Passwordless email authentication has enumeration-resistant copy, one-request-per-action deduplication, persisted rolling resend limits, provider backoff, expiry guidance, token refresh, sign-out, and recoverable failures that do not blame the member for provider exhaustion.
 - [x] Matching uses mutual age, gender, distance, availability, intent, energy, date style, budget, and interests without a popularity score.
 - [x] Acceptance, confirmation, cancellation, day-of status, expiry, reporting, feedback, and Second Chapter writes are validated and concurrency-safe.
 - [x] The venue, window, spot hint, and time-gated recognition phrase stay hidden until their intended reveal boundary.
@@ -52,11 +52,11 @@ Milte is machine-ready when every non-human item below is checked, the verificat
 - [x] IAM is resource-scoped where AWS permits it; actions that require `*` are documented.
 - [x] Matching and housekeeping jobs are retry-safe and run in `Asia/Kolkata`.
 - [x] Deploy `milte-live`, publish the final web export, tighten CORS to its CloudFront origin, and verify every output/control.
-- [x] Prove live OTP/reviewer authentication, health/CORS/security headers, public routes, support persistence/cleanup, housekeeping, CloudFront invalidation, and alarm state.
+- [x] Prove live OTP/authenticated onboarding/profile persistence, health/CORS/security headers, public routes, support persistence/cleanup, housekeeping, CloudFront invalidation, and alarm state.
 
 ## Android and Play package
 
-- [x] Final package/scheme is `app.milte` / `milte://`; version is `1.0.0` (4); min/target SDKs are 24/36.
+- [x] Final package/scheme is `app.milte` / `milte://`; version is `1.0.0` (5); min/target SDKs are 24/36.
 - [x] Continuous Native Generation, local release signing, R8/resource shrinking, disabled backup/cleartext, and `arm64-v8a`/`x86_64` are configured.
 - [x] The RSA-4096 Milte upload key is outside Git and its certificate fingerprint is recorded.
 - [x] A clean signing preflight produced an installable Milte APK/AAB and passed package, signature, ABI, permission, and 16 KB alignment inspection.
@@ -66,17 +66,18 @@ Milte is machine-ready when every non-human item below is checked, the verificat
 - [x] Target Alpha closed testing to India and prepare the Play-processed version 3 bundle and release notes through the closed-release preview gate.
 - [x] Complete Play's child-safety declaration with the live first-party standards URL and the public safety contact, including the authorised in-app reporting and statutory-reporting attestations.
 - [x] Upload and process version code 4, replace the Alpha release with the frozen AAB, and submit the consolidated listing, declarations, India targeting, tester list, and release changes to Play review.
+- [x] Upload version code 5 with the first-run authentication reliability fix, pass Play bundle/device validation, and submit the 100% Alpha closed-test rollout to Google review.
 - [x] Rebuild APK/AAB after the Milte AWS endpoint cutover and freeze final sizes, hashes, signature, permission/ABI/alignment checks, secret scan, and source-map inspection.
 - [x] Complete trusted bundletool validation with the SHA-256-verified official Google 1.18.3 release.
-- [x] Install and cold-launch the exact version 4 APK on API 24 and API 36, open the complete child-safety deep link on both, and retain the earlier version 3 reviewer-authentication, native DOB calendar, approximate-location-only OS-dialog, and five Play screenshot evidence.
+- [x] Install and cold-launch the exact version 5 APK on API 24 and API 36, open the complete child-safety deep link on both, and complete a real production email-code, native DOB calendar, seven-step onboarding, approximate-location-only permission, live API persistence, and Today-screen flow on API 36.
 
 ## Verification matrix
 
-- [x] Final `npm run release:verify` (65 root tests and 25 isolated backend tests pass for version 4).
-- [x] Final dependency audit and bounded waiver review: root/Lambda report zero; mobile reports 16 non-runtime Expo/Metro/config build-tool advisories documented in `DEPENDENCY_RISK.md`; no critical or compatible fixed set exists. Official bundletool is checksum-pinned outside the repository.
+- [x] Final `npm run release:verify` (74 root tests and 25 isolated backend tests pass for version 5).
+- [x] Final dependency audit and bounded waiver review: root/Lambda report zero; mobile reports 12 moderate and zero high/critical iOS/config build-tool advisories documented in `DEPENDENCY_RISK.md`. Official bundletool is checksum-pinned outside the repository.
 - [x] Final APK `apksigner`, `apkanalyzer`, `zipalign -P 16`, ABI/ELF, source-map, and secret inspection
 - [x] Final AAB `jarsigner` and checksum-pinned official bundletool validation
-- [x] Final API 24/API 36 emulator install/authentication matrix and five current phone screenshots
+- [x] Final API 24/API 36 exact-v5 emulator install/deep-link matrix plus real API 36 production authentication/onboarding/data verification
 - [x] Live Milte AWS and CloudFront verification
 - [x] Repository/package secret scan and `git diff --check`
 
@@ -87,7 +88,7 @@ Milte is machine-ready when every non-human item below is checked, the verificat
 - [x] The owner purchased and identity-verified the Google Play developer account and created the `app.milte` app.
 - [ ] The account completes any current closed-testing requirement before production access.
 - [x] The operations email is confirmed on the SNS topic; all six alarms target it and the USD 10 monthly budget notifications are active.
-- [ ] Complete the SES sender cutover before public-volume sign-ups after an owner-controlled domain is available.
+- [ ] Complete the SES sender cutover after AWS approves production access. The Mumbai identity is already verified and the support case contains the bounded transactional OTP use case.
 - [ ] The owner supplies Expo/FCM/Play service-account credentials for physical notification testing and future automated Play submissions.
 - [ ] A physical Android pass covers TalkBack, notifications, location, Maps, calendar, sharing, emergency dialer, and authenticated match/deletion.
 - [ ] The owner backs up and recovery-tests the upload key/password in encrypted storage they control.

@@ -43,5 +43,10 @@
     "ios": "expo run:ios",
     "web": "expo start --web"
   },
+  "overrides": {
+    "metro": "0.84.5",
+    "metro-config": "0.84.5",
+    "metro-transform-worker": "0.84.5"
+  },
   "private": true
 }

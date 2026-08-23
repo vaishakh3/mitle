@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "test": "vitest run",
+    "test:e2e": "npm run web:export && node scripts/e2e-auth.mjs",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.json && (cd apps/mobile && npx tsc --noEmit)",
     "aws:test": "npm --prefix infra/aws/app run build && npm --prefix infra/aws/app test",

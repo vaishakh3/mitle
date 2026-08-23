@@ -14,6 +14,14 @@ Parameters:
     Type: String
     Default: ''
     Description: Optional address for AWS Budget alerts. Leave blank to create no subscription.
+  AuthEmailIdentityArn:
+    Type: String
+    Default: ''
+    Description: Verified Amazon SES email/domain identity ARN for Cognito delivery. Leave blank only for local or pre-launch stacks.
+  AuthEmailFrom:
+    Type: String
+    Default: ''
+    Description: Human-readable From address backed by AuthEmailIdentityArn, for example Milte <support@example.com>.
   AllowedWebOrigins:
     Type: CommaDelimitedList
     Default: https://d1w5h7ki7ldbx2.cloudfront.net
@@ -21,6 +29,9 @@ Parameters:
 
 Conditions:
   HasAlertEmail: !Not [!Equals [!Ref AlertEmail, '']]
+  HasAuthEmailIdentity: !And
+    - !Not [!Equals [!Ref AuthEmailIdentityArn, '']]
+    - !Not [!Equals [!Ref AuthEmailFrom, '']]
 
 Globals:
   Function:
@@ -100,8 +111,12 @@ Resources:
           # Existing Cognito pools require PASSWORD to remain enabled when it was
           # previously configured. Milte's client still initiates EMAIL_OTP only.
           AllowedFirstAuthFactors: [EMAIL_OTP, PASSWORD]
-      EmailConfiguration:
-        EmailSendingAccount: COGNITO_DEFAULT
+      EmailConfiguration: !If
+        - HasAuthEmailIdentity
+        - EmailSendingAccount: DEVELOPER
+          From: !Ref AuthEmailFrom
+          SourceArn: !Ref AuthEmailIdentityArn
+        - EmailSendingAccount: COGNITO_DEFAULT
       EmailAuthenticationMessage: 'Milte: your private sign-in code is {####}. It expires soon.'
       EmailAuthenticationSubject: Your Milte code
       VerificationMessageTemplate:
@@ -546,6 +561,8 @@ Outputs:
     Value: !Ref UserPool
   UserPoolClientId:
     Value: !Ref UserPoolClient
+  AuthEmailMode:
+    Value: !If [HasAuthEmailIdentity, SES, COGNITO_DEFAULT]
   TableName:
     Value: !Ref MilteTable
   WebBucketName:

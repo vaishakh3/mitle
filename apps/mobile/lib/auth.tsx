@@ -4,7 +4,15 @@ import * as SecureStore from 'expo-secure-store';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 
-export { authErrorMessage } from './auth-errors';
+import {
+  authRetryAfterSeconds,
+  normalizeAuthEmail,
+  providerBackoff,
+  recordAuthRequest,
+  type AuthRequestHistory,
+} from './auth-flow';
+
+export { authErrorMessage, authErrorRetryAfter } from './auth-errors';
 
 const appExtra = Constants.expoConfig?.extra;
 const REGION = process.env.EXPO_PUBLIC_AWS_REGION || String(appExtra?.awsRegion ?? '');
@@ -21,10 +29,16 @@ export interface Session {
   user: { id: string; email: string };
 }
 
-interface PendingAuth {
+interface PendingAuth extends AuthRequestHistory {
   email: string;
   kind: 'confirm' | 'signin' | 'password';
   session?: string;
+  delivered: boolean;
+}
+
+export interface AuthRequestResult {
+  reused: boolean;
+  retryAfterSeconds: number;
 }
 
 interface CognitoError extends Error {
@@ -39,6 +53,7 @@ interface AuthState {
 const AuthContext = createContext<AuthState>({ session: null, loading: true });
 const listeners = new Set<(session: Session | null) => void>();
 let currentSession: Session | null = null;
+const authRequestsInFlight = new Map<string, Promise<AuthRequestResult>>();
 
 async function storageGet(key: string) {
   return Platform.OS === 'web' ? AsyncStorage.getItem(key) : SecureStore.getItemAsync(key);
@@ -50,6 +65,42 @@ async function storageSet(key: string, value: string) {
 
 async function storageDelete(key: string) {
   return Platform.OS === 'web' ? AsyncStorage.removeItem(key) : SecureStore.deleteItemAsync(key);
+}
+
+async function pendingAuth(): Promise<PendingAuth | null> {
+  const raw = await storageGet(PENDING_KEY);
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw) as Partial<PendingAuth>;
+    if (!value.email || !['confirm', 'signin', 'password'].includes(String(value.kind))) throw new Error('invalid pending auth');
+    return {
+      email: normalizeAuthEmail(value.email),
+      kind: value.kind as PendingAuth['kind'],
+      session: value.session,
+      delivered: value.delivered !== false,
+      requestTimes: Array.isArray(value.requestTimes) ? value.requestTimes.filter((time): time is number => typeof time === 'number') : [],
+      retryAt: typeof value.retryAt === 'number' ? value.retryAt : undefined,
+    };
+  } catch {
+    await storageDelete(PENDING_KEY);
+    return null;
+  }
+}
+
+async function savePendingAuth(value: PendingAuth) {
+  await storageSet(PENDING_KEY, JSON.stringify(value));
+}
+
+function retryableError(error: unknown, retryAfterSeconds: number, code = errorCode(error)): Error & { code?: string; retryAfterSeconds: number } {
+  const result = error instanceof Error ? error : new Error('Sign-in could not be completed.');
+  const retryable = result as Error & { code?: string; retryAfterSeconds: number };
+  retryable.code = code;
+  retryable.retryAfterSeconds = retryAfterSeconds;
+  return retryable;
+}
+
+function cooldownError(retryAfterSeconds: number) {
+  return retryableError(new Error('A code was already requested.'), retryAfterSeconds, 'AuthCooldown');
 }
 
 function decodeJwt(token: string): Record<string, unknown> {
@@ -70,6 +121,7 @@ async function cognito<T>(target: string, body: Record<string, unknown>): Promis
       'x-amz-target': `AWSCognitoIdentityProviderService.${target}`,
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15_000),
   });
   const result = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -88,7 +140,23 @@ export function isPlayReviewEmail(rawEmail: string): boolean {
   return Boolean(PLAY_REVIEW_EMAIL) && rawEmail.trim().toLowerCase() === PLAY_REVIEW_EMAIL.trim().toLowerCase();
 }
 
-async function startExistingAuth(email: string): Promise<void> {
+async function withProviderBackoff(email: string, previous: PendingAuth | null, error: unknown): Promise<never> {
+  const now = Date.now();
+  const retryAt = providerBackoff(errorCode(error), now);
+  if (!retryAt) throw error;
+  const pending: PendingAuth = {
+    email,
+    kind: previous?.email === email ? previous.kind : 'confirm',
+    session: previous?.email === email ? previous.session : undefined,
+    delivered: previous?.email === email ? previous.delivered : false,
+    requestTimes: previous?.email === email ? previous.requestTimes : [],
+    retryAt,
+  };
+  await savePendingAuth(pending);
+  throw retryableError(error, authRetryAfterSeconds(pending, now));
+}
+
+async function startExistingAuth(email: string, previous: PendingAuth | null, now: number): Promise<PendingAuth> {
   try {
     const result = await cognito<{ Session?: string }>('InitiateAuth', {
       AuthFlow: 'USER_AUTH',
@@ -96,11 +164,17 @@ async function startExistingAuth(email: string): Promise<void> {
       AuthParameters: { USERNAME: email, PREFERRED_CHALLENGE: 'EMAIL_OTP' },
     });
     if (!result.Session) throw new Error('AWS did not start the sign-in challenge.');
-    await storageSet(PENDING_KEY, JSON.stringify({ email, kind: 'signin', session: result.Session } satisfies PendingAuth));
+    const history = recordAuthRequest(previous?.email === email ? previous : null, now);
+    const pending = { email, kind: 'signin', session: result.Session, delivered: true, ...history } satisfies PendingAuth;
+    await savePendingAuth(pending);
+    return pending;
   } catch (error) {
     if (errorCode(error) !== 'UserNotConfirmedException') throw error;
     await cognito('ResendConfirmationCode', { ClientId: CLIENT_ID, Username: email });
-    await storageSet(PENDING_KEY, JSON.stringify({ email, kind: 'confirm' } satisfies PendingAuth));
+    const history = recordAuthRequest(previous?.email === email ? previous : null, now);
+    const pending = { email, kind: 'confirm', delivered: true, ...history } satisfies PendingAuth;
+    await savePendingAuth(pending);
+    return pending;
   }
 }
 
@@ -125,41 +199,76 @@ function sessionFromResult(result: Record<string, string | number | undefined>, 
   };
 }
 
-export async function beginEmailAuth(rawEmail: string): Promise<void> {
-  const email = rawEmail.trim().toLowerCase();
+async function beginEmailAuthOnce(email: string): Promise<AuthRequestResult> {
   if (isPlayReviewEmail(email)) {
-    await storageSet(PENDING_KEY, JSON.stringify({ email, kind: 'password' } satisfies PendingAuth));
-    return;
+    await savePendingAuth({ email, kind: 'password', delivered: true });
+    return { reused: false, retryAfterSeconds: 0 };
   }
+
+  const previous = await pendingAuth();
+  const samePending = previous?.email === email ? previous : null;
+  const now = Date.now();
+  const retryAfterSeconds = authRetryAfterSeconds(samePending, now);
+  if (retryAfterSeconds > 0) {
+    if (samePending?.delivered) return { reused: true, retryAfterSeconds };
+    throw cooldownError(retryAfterSeconds);
+  }
+
   try {
     await cognito('SignUp', {
       ClientId: CLIENT_ID,
       Username: email,
       UserAttributes: [{ Name: 'email', Value: email }],
     });
-    await storageSet(PENDING_KEY, JSON.stringify({ email, kind: 'confirm' } satisfies PendingAuth));
+    const history = recordAuthRequest(samePending, now);
+    await savePendingAuth({ email, kind: 'confirm', delivered: true, ...history });
+    return { reused: false, retryAfterSeconds: authRetryAfterSeconds(history, now) };
   } catch (error) {
-    if (errorCode(error) !== 'UsernameExistsException') throw error;
-    await startExistingAuth(email);
+    if (errorCode(error) === 'UsernameExistsException') {
+      try {
+        const pending = await startExistingAuth(email, samePending, now);
+        return { reused: false, retryAfterSeconds: authRetryAfterSeconds(pending, now) };
+      } catch (existingError) {
+        return withProviderBackoff(email, samePending, existingError);
+      }
+    }
+    return withProviderBackoff(email, samePending, error);
   }
 }
 
-export async function resendEmailAuth(): Promise<void> {
-  const raw = await storageGet(PENDING_KEY);
-  if (!raw) throw new Error('Go back and enter your email to request a fresh code.');
-  const pending = JSON.parse(raw) as PendingAuth;
+export function beginEmailAuth(rawEmail: string): Promise<AuthRequestResult> {
+  const email = normalizeAuthEmail(rawEmail);
+  const existing = authRequestsInFlight.get(email);
+  if (existing) return existing;
+  const operation = beginEmailAuthOnce(email).finally(() => authRequestsInFlight.delete(email));
+  authRequestsInFlight.set(email, operation);
+  return operation;
+}
+
+export async function resendEmailAuth(): Promise<AuthRequestResult> {
+  const pending = await pendingAuth();
+  if (!pending) throw new Error('Go back and enter your email to request a fresh code.');
   if (pending.kind === 'password') throw new Error('Reviewer access uses the reusable password supplied to Google Play.');
-  if (pending.kind === 'confirm') {
-    await cognito('ResendConfirmationCode', { ClientId: CLIENT_ID, Username: pending.email });
-    return;
+  const now = Date.now();
+  const retryAfterSeconds = authRetryAfterSeconds(pending, now);
+  if (retryAfterSeconds > 0) throw cooldownError(retryAfterSeconds);
+  try {
+    if (pending.kind === 'confirm') {
+      await cognito('ResendConfirmationCode', { ClientId: CLIENT_ID, Username: pending.email });
+      const history = recordAuthRequest(pending, now);
+      await savePendingAuth({ ...pending, delivered: true, ...history });
+      return { reused: false, retryAfterSeconds: authRetryAfterSeconds(history, now) };
+    }
+    const next = await startExistingAuth(pending.email, pending, now);
+    return { reused: false, retryAfterSeconds: authRetryAfterSeconds(next, now) };
+  } catch (error) {
+    return withProviderBackoff(pending.email, pending, error);
   }
-  await startExistingAuth(pending.email);
 }
 
 export async function completeEmailAuth(code: string): Promise<Session> {
-  const raw = await storageGet(PENDING_KEY);
-  if (!raw) throw new Error('Request a fresh code first.');
-  const pending = JSON.parse(raw) as PendingAuth;
+  const pending = await pendingAuth();
+  if (!pending || !pending.delivered) throw new Error('Request a fresh code first.');
   let authResult: Record<string, string | number | undefined> | undefined;
   if (pending.kind === 'confirm') {
     const confirmed = await cognito<{ Session?: string }>('ConfirmSignUp', {
@@ -175,10 +284,17 @@ export async function completeEmailAuth(code: string): Promise<Session> {
     });
     authResult = result.AuthenticationResult;
     if (!authResult && result.Session) {
-      await storageSet(PENDING_KEY, JSON.stringify({ email: pending.email, kind: 'signin', session: result.Session } satisfies PendingAuth));
-      throw new Error('Your account is confirmed. Enter the new sign-in code we just sent.');
+      const history = recordAuthRequest(pending, Date.now());
+      const nextPending = { email: pending.email, kind: 'signin', session: result.Session, delivered: true, ...history } satisfies PendingAuth;
+      await savePendingAuth(nextPending);
+      throw retryableError(
+        new Error('Your account is confirmed. Enter the new sign-in code we just sent.'),
+        authRetryAfterSeconds(nextPending, Date.now()),
+        undefined,
+      );
     }
   } else if (pending.kind === 'signin') {
+    if (!pending.session) throw new Error('That sign-in attempt has expired. Request a fresh code.');
     const result = await cognito<{ AuthenticationResult?: Record<string, string | number | undefined> }>('RespondToAuthChallenge', {
       ChallengeName: 'EMAIL_OTP',
       ClientId: CLIENT_ID,
@@ -218,7 +334,9 @@ export async function getAccessToken(): Promise<string> {
   let session = currentSession;
   if (!session) {
     const raw = await storageGet(STORAGE_KEY);
-    session = raw ? JSON.parse(raw) as Session : null;
+    if (raw) {
+      try { session = JSON.parse(raw) as Session; } catch { await storageDelete(STORAGE_KEY); }
+    }
     currentSession = session;
   }
   if (!session) throw new Error('Please sign in again.');
@@ -239,7 +357,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
     storageGet(STORAGE_KEY).then(async (raw) => {
-      let stored = raw ? JSON.parse(raw) as Session : null;
+      let stored: Session | null = null;
+      if (raw) {
+        try { stored = JSON.parse(raw) as Session; } catch { await storageDelete(STORAGE_KEY); }
+      }
       if (stored && Date.now() >= stored.expiresAt) stored = await refreshSession(stored).catch(() => null);
       currentSession = stored;
       if (mounted) { setSession(stored); setLoading(false); }

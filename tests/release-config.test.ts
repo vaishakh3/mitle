@@ -21,7 +21,7 @@ describe('Play review release configuration', () => {
     const appConfig = JSON.parse(fs.readFileSync(path.join(repositoryRoot, 'apps/mobile/app.json'), 'utf8'));
     const authSource = fs.readFileSync(path.join(repositoryRoot, 'apps/mobile/lib/auth.tsx'), 'utf8');
 
-    expect(appConfig.expo.android.versionCode).toBe(4);
+    expect(appConfig.expo.android.versionCode).toBe(5);
     expect(appConfig.expo.extra.playReviewEmail).toBe('play-review@milte.app');
     expect(JSON.stringify(appConfig)).not.toMatch(/reviewPassword|playReviewPassword/i);
     expect(authSource).toContain("PREFERRED_CHALLENGE: 'PASSWORD'");

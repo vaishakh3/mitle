@@ -17,7 +17,9 @@ Production is the `milte-live` CloudFormation stack in `ap-south-1`. Infrastruct
      --parameter-overrides \
        Environment=live \
        LaunchTimezone=Asia/Kolkata \
-       AlertEmail="$MILTE_ALERT_EMAIL"
+       AlertEmail="$MILTE_ALERT_EMAIL" \
+       AuthEmailIdentityArn="$MILTE_AUTH_EMAIL_IDENTITY_ARN" \
+       AuthEmailFrom="$MILTE_AUTH_EMAIL_FROM"
    ```
 
 4. Read CloudFormation outputs. Export web with the live public IDs, sync `apps/mobile/dist/` to `WebBucketName` using `aws s3 sync --delete`, and invalidate `/*` on `WebDistributionId`.
@@ -61,7 +63,7 @@ Production is the `milte-live` CloudFormation stack in `ap-south-1`. Infrastruct
 
 ## Email and notifications
 
-- Cognito default email delivery is acceptable only for the controlled beta and its published service quotas. Before public-volume acquisition, verify a domain in SES, move Cognito to the SES sender in Mumbai, configure bounce/complaint handling, and run deliverability canaries.
+- Cognito default email delivery is capped at 50 messages per AWS account each day and is not acceptable for a multi-person pilot. Production deployments must use a verified SES identity in Mumbai, report `AuthEmailMode=SES`, configure bounce/complaint handling, and run deliverability canaries.
 - Push is optional to account integrity but important to arrival. Create the EAS project, add its public `projectId`, configure Android push credentials, and test match, commitment, reminder, signal, and feedback notifications on a physical device. Invalid Expo tokens are removed automatically after `DeviceNotRegistered` responses.
 
 ## Sensitive-data rules

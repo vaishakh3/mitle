@@ -1,0 +1,175 @@
+import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
+import { readFile, stat } from 'node:fs/promises';
+import { dirname, extname, join, normalize } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { chromium } from 'playwright';
+
+const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+const webRoot = join(projectRoot, 'apps/mobile/dist');
+const types = new Map([
+  ['.css', 'text/css; charset=utf-8'],
+  ['.html', 'text/html; charset=utf-8'],
+  ['.ico', 'image/x-icon'],
+  ['.js', 'text/javascript; charset=utf-8'],
+  ['.json', 'application/json; charset=utf-8'],
+  ['.png', 'image/png'],
+  ['.svg', 'image/svg+xml'],
+  ['.woff2', 'font/woff2'],
+]);
+
+const server = createServer(async (request, response) => {
+  try {
+    const pathname = new URL(request.url ?? '/', 'http://127.0.0.1').pathname;
+    const requested = normalize(join(webRoot, pathname));
+    let file = requested.startsWith(webRoot) ? requested : join(webRoot, 'index.html');
+    if ((await stat(file).catch(() => null))?.isDirectory()) file = join(file, 'index.html');
+    if (!(await stat(file).catch(() => null))?.isFile()) file = join(webRoot, 'index.html');
+    const body = await readFile(file);
+    response.writeHead(200, {
+      'cache-control': 'no-store',
+      'content-type': types.get(extname(file)) ?? 'application/octet-stream',
+    });
+    response.end(body);
+  } catch (error) {
+    response.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
+    response.end(error instanceof Error ? error.message : 'server error');
+  }
+});
+
+await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+const address = server.address();
+if (!address || typeof address === 'string') throw new Error('Could not start the browser test server.');
+const baseUrl = `http://127.0.0.1:${address.port}`;
+const browser = await chromium.launch({ headless: true });
+
+async function withPage(run, { allowedConsoleErrors = [] } = {}) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const page = await context.newPage();
+  const consoleErrors = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text());
+  });
+  page.on('pageerror', (error) => consoleErrors.push(error.message));
+  try {
+    await run(page);
+    const actionableErrors = consoleErrors.filter((message) => (
+      !/Download the React DevTools/i.test(message)
+      && !allowedConsoleErrors.some((allowed) => allowed.test(message))
+    ));
+    assert.deepEqual(actionableErrors, [], `browser errors: ${actionableErrors.join('\n')}`);
+  } finally {
+    await context.close();
+  }
+}
+
+async function openSignIn(page) {
+  await page.goto(`${baseUrl}/sign-in`, { waitUntil: 'networkidle' });
+  await page.getByLabel('Email address').waitFor({ state: 'visible' });
+}
+
+async function mockCognito(page, respond) {
+  await page.route('https://cognito-idp.ap-south-1.amazonaws.com/**', async (route) => {
+    const request = route.request();
+    const target = request.headers()['x-amz-target']?.split('.').at(-1) ?? '';
+    const body = request.postDataJSON();
+    const result = await respond({ target, body });
+    await route.fulfill({
+      status: result.status ?? 200,
+      contentType: 'application/x-amz-json-1.1',
+      body: JSON.stringify(result.body ?? {}),
+    });
+  });
+}
+
+const checks = [];
+async function check(name, run) {
+  try {
+    await run();
+    checks.push({ name, status: 'PASS' });
+  } catch (error) {
+    checks.push({ name, status: 'FAIL', error: error instanceof Error ? error.message : String(error) });
+    throw error;
+  }
+}
+
+try {
+  await check('one physical action produces one Cognito email request', () => withPage(async (page) => {
+    let signupRequests = 0;
+    await mockCognito(page, async ({ target }) => {
+      assert.equal(target, 'SignUp');
+      signupRequests += 1;
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      return { body: { UserConfirmed: false, UserSub: 'test-user' } };
+    });
+    await openSignIn(page);
+    const email = 'new-tester@example.com';
+    await page.getByLabel('Email address').fill(email);
+    await page.getByRole('button', { name: 'Send my private code' }).dblclick({ delay: 10 });
+    await page.getByText(`We sent a six-digit code to ${email}.`).waitFor();
+    assert.equal(signupRequests, 1);
+
+    await page.getByRole('button', { name: 'Use another email' }).click();
+    await page.getByRole('button', { name: 'Send my private code' }).click();
+    await page.getByText(`We sent a six-digit code to ${email}.`).waitFor();
+    assert.equal(signupRequests, 1, 'returning to the same address must reuse the live code');
+  }));
+
+  await check('provider limits are honest, recoverable, and locally suppressed', () => withPage(async (page) => {
+    let requests = 0;
+    await mockCognito(page, ({ target }) => {
+      assert.equal(target, 'SignUp');
+      requests += 1;
+      return {
+        status: 400,
+        body: { __type: 'LimitExceededException', message: 'Attempt limit exceeded' },
+      };
+    });
+    await openSignIn(page);
+    await page.getByLabel('Email address').fill('limited-tester@example.com');
+    await page.getByRole('button', { name: 'Send my private code' }).click();
+    await page.getByText(/Your address is fine/).waitFor();
+    await page.getByRole('button', { name: 'Got it' }).click();
+    const retry = page.getByRole('button', { name: /Try again in 1 hour/ });
+    await retry.waitFor();
+    assert.equal(await retry.isDisabled(), true);
+    assert.equal(requests, 1);
+  }, { allowedConsoleErrors: [/status of 400 \(Bad Request\)/] }));
+
+  await check('new-account confirmation explains the second Cognito code', () => withPage(async (page) => {
+    const targets = [];
+    await mockCognito(page, ({ target, body }) => {
+      targets.push(target);
+      if (target === 'SignUp') return { body: { UserConfirmed: false, UserSub: 'two-code-user' } };
+      if (target === 'ConfirmSignUp') return { body: { Session: 'confirmed-session' } };
+      if (target === 'InitiateAuth' && body.Session === 'confirmed-session') {
+        return { body: { ChallengeName: 'EMAIL_OTP', Session: 'signin-session' } };
+      }
+      throw new Error(`Unexpected Cognito request: ${target}`);
+    });
+    await openSignIn(page);
+    await page.getByLabel('Email address').fill('confirmation-tester@example.com');
+    await page.getByRole('button', { name: 'Send my private code' }).click();
+    const code = page.getByLabel('Six digit sign in code');
+    await code.fill('123456');
+    await page.getByRole('button', { name: 'Enter Milte' }).click();
+    await page.getByText('One more code is on its way').waitFor();
+    await page.getByText('Your account is confirmed. Enter the new sign-in code we just sent.').waitFor();
+    assert.equal(await code.inputValue(), '');
+    assert.deepEqual(targets, ['SignUp', 'ConfirmSignUp', 'InitiateAuth']);
+  }));
+
+  await check('public safety and account routes render from a cold navigation', () => withPage(async (page) => {
+    for (const path of ['/terms', '/privacy', '/support', '/child-safety', '/delete-account']) {
+      await page.goto(`${baseUrl}${path}`, { waitUntil: 'networkidle' });
+      assert.ok((await page.locator('body').innerText()).trim().length > 100, `${path} rendered too little content`);
+    }
+  }));
+} finally {
+  await browser.close();
+  await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+}
+
+console.table(checks);
+console.log(`Browser verification passed: ${checks.length} checks.`);

@@ -28,10 +28,10 @@ Milte is designed to operate without café approvals, venue partnerships, third-
 
 - [x] Milte brand system, icons, feature graphic, listing, declarations, and release notes are complete.
 - [x] Product UI is responsive, keyboard-safe, reduced-motion aware, scrollable at large text, and uses shared accessible controls.
-- [x] Run the full post-cutover `npm run release:verify` and freeze dependency evidence.
+- [x] Run the full version-5 `npm run release:verify` (74 root and 25 isolated backend tests) and freeze dependency evidence.
 - [x] Build the endpoint-bound signed APK/AAB; verify signature, package, SDKs, ABIs, permissions, 16 KB alignment, source maps, and secrets.
 - [x] Validate the final AAB with the SHA-256-verified official Google bundletool 1.18.3 JAR.
-- [x] Fresh-install the exact final APK on API 24 and API 36 and upload five verified phone screenshots to Play.
+- [x] Fresh-install the exact version-5 APK on API 24 and API 36, exercise the child-safety deep link on both, and complete a real production authentication/onboarding/location/data/Today flow on API 36.
 - [ ] Complete a physical-device pass for TalkBack, notification delivery, allowed/denied location, Maps, calendar, sharing, emergency dialer, and the authenticated match/deletion loop.
 
 ## Play and go/no-go
@@ -40,6 +40,7 @@ Milte is designed to operate without café approvals, venue partnerships, third-
 - [x] Publish version code 3 to the internal track with controlled reviewer access, release notes, and the full visual store listing.
 - [x] Set the Play application category to Dating and reconcile Data Safety to approximate-location-only.
 - [x] Target Alpha closed testing to India, process version code 4, select the 25-address tester list, and send the complete release and app-setup changes to Play review.
+- [x] Process version code 5 in Play, confirm zero supported-device loss, and send the 100% Alpha closed-test sign-in-reliability release to Google review.
 - [x] Publish the public support email and complete the IARC content-rating questionnaire and legal acceptance.
 - [ ] If required for the account type, complete the current closed-testing period with the required tester count.
 - [ ] Back up and recovery-test the JKS/password outside this workstation.

@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Body, Brand, Button, Card, Input, Label, PageScroll, Poetic, Rule, Screen, Small } from '../components/ui';
 import * as dialog from '../lib/dialog';
-import { authErrorMessage, beginEmailAuth, completeEmailAuth, isPlayReviewEmail, resendEmailAuth } from '../lib/auth';
+import { authErrorMessage, authErrorRetryAfter, beginEmailAuth, completeEmailAuth, isPlayReviewEmail, resendEmailAuth } from '../lib/auth';
+import { formatRetryDuration } from '../lib/auth-flow';
 import { colors, fonts, spacing } from '../lib/theme';
 
 export default function SignIn() {
@@ -15,6 +16,7 @@ export default function SignIn() {
   const [stage, setStage] = useState<'email' | 'code'>('email');
   const [busy, setBusy] = useState(false);
   const [resendAvailableIn, setResendAvailableIn] = useState(0);
+  const requestInFlight = useRef(false);
   const normalizedEmail = email.trim().toLowerCase();
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
   const reviewAccess = isPlayReviewEmail(normalizedEmail);
@@ -27,42 +29,56 @@ export default function SignIn() {
   }, [resendAvailableIn]);
 
   async function sendCode() {
-    if (!emailValid || busy) return;
+    if (!emailValid || busy || requestInFlight.current || resendAvailableIn > 0) return;
+    requestInFlight.current = true;
     setBusy(true);
     try {
-      await beginEmailAuth(normalizedEmail);
+      const result = await beginEmailAuth(normalizedEmail);
       setStage('code');
-      setResendAvailableIn(reviewAccess ? 0 : 45);
+      setResendAvailableIn(reviewAccess ? 0 : result.retryAfterSeconds);
     } catch (error) {
-      dialog.alert('We could not send the code', authErrorMessage(error));
+      setResendAvailableIn(authErrorRetryAfter(error));
+      dialog.alert(authErrorRetryAfter(error) > 0 ? 'Email is temporarily busy' : 'We could not send the code', authErrorMessage(error));
     } finally {
+      requestInFlight.current = false;
       setBusy(false);
     }
   }
 
   async function resendCode() {
-    if (busy || resendAvailableIn > 0) return;
+    if (busy || requestInFlight.current || resendAvailableIn > 0) return;
+    requestInFlight.current = true;
     setBusy(true);
     try {
-      await resendEmailAuth();
-      setResendAvailableIn(45);
+      const result = await resendEmailAuth();
+      setResendAvailableIn(result.retryAfterSeconds);
       dialog.alert('A fresh code is on its way', `We sent it to ${normalizedEmail}. It may take a minute to arrive.`);
     } catch (error) {
-      dialog.alert('We could not resend the code', authErrorMessage(error));
+      setResendAvailableIn(authErrorRetryAfter(error));
+      dialog.alert(authErrorRetryAfter(error) > 0 ? 'Please wait before another code' : 'We could not resend the code', authErrorMessage(error));
     } finally {
+      requestInFlight.current = false;
       setBusy(false);
     }
   }
 
   async function verify() {
-    if (!credentialValid || busy) return;
+    if (!credentialValid || busy || requestInFlight.current) return;
+    requestInFlight.current = true;
     setBusy(true);
     try {
       await completeEmailAuth(code.trim());
       router.replace('/');
     } catch (error) {
-      dialog.alert(reviewAccess ? 'That review password did not work' : 'That code did not work', authErrorMessage(error));
+      const advancedToSignIn = (error as Error | undefined)?.message === 'Your account is confirmed. Enter the new sign-in code we just sent.';
+      setResendAvailableIn(Math.max(resendAvailableIn, authErrorRetryAfter(error)));
+      if (advancedToSignIn) setCode('');
+      dialog.alert(
+        advancedToSignIn ? 'One more code is on its way' : reviewAccess ? 'That review password did not work' : 'That code did not work',
+        authErrorMessage(error),
+      );
     } finally {
+      requestInFlight.current = false;
       setBusy(false);
     }
   }
@@ -106,7 +122,16 @@ export default function SignIn() {
                   onSubmitEditing={sendCode}
                   returnKeyType="go"
                 />
-                <Button title={reviewAccess ? 'Continue to review access' : 'Send my private code'} onPress={sendCode} loading={busy} disabled={!emailValid} />
+                <Button
+                  title={reviewAccess
+                    ? 'Continue to review access'
+                    : resendAvailableIn > 0
+                      ? `Try again in ${formatRetryDuration(resendAvailableIn)}`
+                      : 'Send my private code'}
+                  onPress={sendCode}
+                  loading={busy}
+                  disabled={!emailValid || resendAvailableIn > 0}
+                />
                 <Small style={{ textAlign: 'center' }}>{reviewAccess ? 'Restricted review access for Google Play.' : 'Passwordless, private, and 18+ only.'}</Small>
                 <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap' }}>
                   <Button title="Terms" variant="quiet" onPress={() => router.push('/terms')} />
@@ -136,7 +161,7 @@ export default function SignIn() {
                 <Button title="Enter Milte" onPress={verify} loading={busy} disabled={!credentialValid} />
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   {reviewAccess ? <View /> : <Button
-                      title={resendAvailableIn > 0 ? `Resend in ${resendAvailableIn}s` : 'Resend code'}
+                      title={resendAvailableIn > 0 ? `Resend in ${formatRetryDuration(resendAvailableIn)}` : 'Resend code'}
                       variant="quiet"
                       onPress={resendCode}
                       disabled={busy || resendAvailableIn > 0}
