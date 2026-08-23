@@ -27,7 +27,7 @@ export function authErrorMessage(error: unknown): string {
 
   switch (errorCode(error)) {
     case 'CodeMismatchException':
-      return 'That code is not correct. Check the six digits and try again.';
+      return 'That code is not correct. Check the code and try again.';
     case 'ExpiredCodeException':
       return 'That code has expired. Request a fresh one below.';
     case 'LimitExceededException':

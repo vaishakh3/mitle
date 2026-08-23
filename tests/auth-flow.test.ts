@@ -6,6 +6,7 @@ import {
   AUTH_REQUEST_WINDOW_MS,
   authRetryAfterSeconds,
   formatRetryDuration,
+  isEmailCodeValid,
   nextAuthRequestAt,
   normalizeAuthEmail,
   providerBackoff,
@@ -17,6 +18,15 @@ describe('authentication request throttling', () => {
 
   it('normalizes addresses before using them as request keys', () => {
     expect(normalizeAuthEmail('  Person+Test@Example.COM ')).toBe('person+test@example.com');
+  });
+
+  it('accepts both Cognito confirmation and email-OTP code lengths', () => {
+    expect(isEmailCodeValid('123456')).toBe(true);
+    expect(isEmailCodeValid('12345678')).toBe(true);
+    expect(isEmailCodeValid('12345')).toBe(false);
+    expect(isEmailCodeValid('1234567')).toBe(false);
+    expect(isEmailCodeValid('123456789')).toBe(false);
+    expect(isEmailCodeValid('1234ab')).toBe(false);
   });
 
   it('prevents an immediate duplicate request while preserving the existing code', () => {

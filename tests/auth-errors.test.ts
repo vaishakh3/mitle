@@ -9,7 +9,8 @@ describe('sign-in error copy', () => {
 
   it('gives specific recovery guidance for expected Cognito errors', () => {
     const mismatch = Object.assign(new Error('bad code'), { code: 'CodeMismatchException' });
-    expect(authErrorMessage(mismatch)).toContain('six digits');
+    expect(authErrorMessage(mismatch)).toContain('Check the code');
+    expect(authErrorMessage(mismatch)).not.toMatch(/six|eight|\b6\b|\b8\b/i);
   });
 
   it('does not blame a new tester for the provider-wide email ceiling', () => {

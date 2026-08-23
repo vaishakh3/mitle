@@ -44,8 +44,8 @@ if (!address || typeof address === 'string') throw new Error('Could not start th
 const baseUrl = `http://127.0.0.1:${address.port}`;
 const browser = await chromium.launch({ headless: true });
 
-async function withPage(run, { allowedConsoleErrors = [] } = {}) {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+async function withPage(run, { allowedConsoleErrors = [], viewport = { width: 390, height: 844 } } = {}) {
+  const context = await browser.newContext({ viewport });
   const page = await context.newPage();
   const consoleErrors = [];
   page.on('console', (message) => {
@@ -107,14 +107,77 @@ try {
     const email = 'new-tester@example.com';
     await page.getByLabel('Email address').fill(email);
     await page.getByRole('button', { name: 'Send my private code' }).dblclick({ delay: 10 });
-    await page.getByText(`We sent a six-digit code to ${email}.`).waitFor();
+    await page.getByText(`Enter the code we sent to ${email}.`).waitFor();
     assert.equal(signupRequests, 1);
 
     await page.getByRole('button', { name: 'Use another email' }).click();
     await page.getByRole('button', { name: 'Send my private code' }).click();
-    await page.getByText(`We sent a six-digit code to ${email}.`).waitFor();
+    await page.getByText(`Enter the code we sent to ${email}.`).waitFor();
     assert.equal(signupRequests, 1, 'returning to the same address must reuse the live code');
   }));
+
+  await check('existing-user Cognito flow accepts and submits an eight-digit email OTP', () => withPage(async (page) => {
+    const email = 'existing-tester@example.com';
+    let submittedCode;
+    await mockCognito(page, ({ target, body }) => {
+      if (target === 'SignUp') {
+        return { status: 400, body: { __type: 'UsernameExistsException', message: 'User already exists' } };
+      }
+      if (target === 'InitiateAuth') {
+        return { body: { ChallengeName: 'EMAIL_OTP', Session: 'existing-user-session' } };
+      }
+      if (target === 'RespondToAuthChallenge') {
+        submittedCode = body.ChallengeResponses.EMAIL_OTP_CODE;
+        const payload = Buffer.from(JSON.stringify({ sub: 'existing-user', email })).toString('base64url');
+        return {
+          body: {
+            AuthenticationResult: {
+              AccessToken: 'access-token',
+              IdToken: `header.${payload}.signature`,
+              RefreshToken: 'refresh-token',
+              ExpiresIn: 3600,
+            },
+          },
+        };
+      }
+      throw new Error(`Unexpected Cognito request: ${target}`);
+    });
+    await page.route('https://5t32c9fq3l.execute-api.ap-south-1.amazonaws.com/**', (route) => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ onboarding_complete: false }),
+    }));
+    await openSignIn(page);
+    await page.getByLabel('Email address').fill(email);
+    await page.getByRole('button', { name: 'Send my private code' }).click();
+    const code = page.getByLabel('Email sign in code');
+    await code.fill('87654321');
+    assert.equal(await code.inputValue(), '87654321');
+    assert.equal(await page.getByRole('button', { name: 'Enter Milte' }).isDisabled(), false);
+    await page.getByRole('button', { name: 'Enter Milte' }).click();
+    await page.waitForURL(/\/onboarding$/);
+    assert.equal(submittedCode, '87654321');
+  }, { allowedConsoleErrors: [/status of 400 \(Bad Request\)/] }));
+
+  await check('code actions stay inside a narrow viewport', () => withPage(async (page) => {
+    await mockCognito(page, ({ target }) => {
+      assert.equal(target, 'SignUp');
+      return { body: { UserConfirmed: false, UserSub: 'narrow-user' } };
+    });
+    await openSignIn(page);
+    await page.getByLabel('Email address').fill('narrow-tester@example.com');
+    await page.getByRole('button', { name: 'Send my private code' }).click();
+    const actions = [
+      page.getByRole('button', { name: /Resend in/ }),
+      page.getByRole('button', { name: 'Use another email' }),
+    ];
+    for (const action of actions) {
+      const box = await action.boundingBox();
+      assert.ok(box, 'action must be visible');
+      assert.ok(box.x >= 0, 'action must not overflow the left edge');
+      assert.ok(box.x + box.width <= 320, 'action must not overflow the right edge');
+    }
+  }, { viewport: { width: 320, height: 568 } }));
 
   await check('provider limits are honest, recoverable, and locally suppressed', () => withPage(async (page) => {
     let requests = 0;
@@ -151,7 +214,7 @@ try {
     await openSignIn(page);
     await page.getByLabel('Email address').fill('confirmation-tester@example.com');
     await page.getByRole('button', { name: 'Send my private code' }).click();
-    const code = page.getByLabel('Six digit sign in code');
+    const code = page.getByLabel('Email sign in code');
     await code.fill('123456');
     await page.getByRole('button', { name: 'Enter Milte' }).click();
     await page.getByText('One more code is on its way').waitFor();

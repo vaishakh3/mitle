@@ -1,16 +1,15 @@
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Body, Brand, Button, Card, Input, Label, PageScroll, Poetic, Rule, Screen, Small } from '../components/ui';
 import * as dialog from '../lib/dialog';
 import { authErrorMessage, authErrorRetryAfter, beginEmailAuth, completeEmailAuth, isPlayReviewEmail, resendEmailAuth } from '../lib/auth';
-import { formatRetryDuration } from '../lib/auth-flow';
+import { formatRetryDuration, isEmailCodeValid } from '../lib/auth-flow';
 import { colors, fonts, spacing } from '../lib/theme';
 
 export default function SignIn() {
-  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [stage, setStage] = useState<'email' | 'code'>('email');
@@ -20,7 +19,9 @@ export default function SignIn() {
   const normalizedEmail = email.trim().toLowerCase();
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
   const reviewAccess = isPlayReviewEmail(normalizedEmail);
-  const credentialValid = reviewAccess ? code.length >= 8 : code.length === 6;
+  // Cognito uses different code formats for account confirmation and EMAIL_OTP
+  // sign-in. Never make the UI reject a code that the provider actually sent.
+  const credentialValid = reviewAccess ? code.length >= 8 : isEmailCodeValid(code);
 
   useEffect(() => {
     if (resendAvailableIn <= 0) return;
@@ -85,16 +86,17 @@ export default function SignIn() {
 
   return (
     <Screen>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <PageScroll
-          style={{ flex: 1 }}
-          contentContainerStyle={{
-            flexGrow: 1,
-            paddingTop: Math.max(insets.top, spacing.md) + spacing.lg,
-            paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.md,
-            gap: spacing.xl,
-          }}
-        >
+      <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1 }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+          <PageScroll
+            style={{ flex: 1 }}
+            contentContainerStyle={{
+              flexGrow: 1,
+              paddingTop: spacing.lg,
+              paddingBottom: spacing.lg,
+              gap: spacing.xl,
+            }}
+          >
           <Animated.View entering={FadeIn.duration(700)}>
             <Brand />
             <View style={{ height: spacing.xl }} />
@@ -143,23 +145,24 @@ export default function SignIn() {
               <View style={{ gap: spacing.md }}>
                 <Body>{reviewAccess
                   ? <>Enter the reusable review password supplied in Google Play Console for <Text style={{ color: colors.text, fontFamily: fonts.sansBold }}>{normalizedEmail}</Text>.</>
-                  : <>We sent a six-digit code to <Text style={{ color: colors.text, fontFamily: fonts.sansBold }}>{normalizedEmail}</Text>.</>}
+                  : <>Enter the code we sent to <Text style={{ color: colors.text, fontFamily: fonts.sansBold }}>{normalizedEmail}</Text>.</>}
                 </Body>
                 <Input
-                  accessibilityLabel={reviewAccess ? 'Google Play review password' : 'Six digit sign in code'}
-                  placeholder={reviewAccess ? 'Review password' : '••••••'}
+                  accessibilityLabel={reviewAccess ? 'Google Play review password' : 'Email sign in code'}
+                  placeholder={reviewAccess ? 'Review password' : 'Enter code'}
                   autoCapitalize="none"
                   autoCorrect={false}
+                  autoComplete={reviewAccess ? 'off' : 'one-time-code'}
                   secureTextEntry={reviewAccess}
                   keyboardType={reviewAccess ? 'default' : 'number-pad'}
-                  maxLength={reviewAccess ? 100 : 6}
+                  maxLength={reviewAccess ? 100 : 8}
                   value={code}
                   onChangeText={(value) => setCode(reviewAccess ? value : value.replace(/\D/g, ''))}
                   onSubmitEditing={verify}
-                  style={{ letterSpacing: reviewAccess ? 0 : 10, textAlign: 'center', fontSize: 22 }}
+                  style={{ letterSpacing: reviewAccess ? 0 : 6, textAlign: 'center', fontSize: 22 }}
                 />
                 <Button title="Enter Milte" onPress={verify} loading={busy} disabled={!credentialValid} />
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <View style={{ gap: spacing.xs }}>
                   {reviewAccess ? <View /> : <Button
                       title={resendAvailableIn > 0 ? `Resend in ${formatRetryDuration(resendAvailableIn)}` : 'Resend code'}
                       variant="quiet"
@@ -179,8 +182,9 @@ export default function SignIn() {
               <Rule mark="03" title="Offline by design" body="When the hour ends, the match disappears." />
             </Card>
           </Animated.View>
-        </PageScroll>
-      </KeyboardAvoidingView>
+          </PageScroll>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </Screen>
   );
 }

@@ -13,6 +13,10 @@ export function normalizeAuthEmail(value: string): string {
   return value.trim().toLowerCase();
 }
 
+export function isEmailCodeValid(value: string): boolean {
+  return /^(?:\d{6}|\d{8})$/.test(value);
+}
+
 export function recentAuthRequests(history: AuthRequestHistory | null | undefined, now: number): number[] {
   return (history?.requestTimes ?? [])
     .filter((time) => Number.isFinite(time) && time > now - AUTH_REQUEST_WINDOW_MS && time <= now)
