@@ -7,9 +7,11 @@ import {
   mutuallyEligible,
   pairKey,
   pairPool,
+  privateCompatibility,
   scorePair,
 } from '../supabase/functions/_shared/matching.ts';
-import { nextEveningWindow } from '../supabase/functions/_shared/time.ts';
+import { nextEveningWindow, nextLocalWeekday } from '../supabase/functions/_shared/time.ts';
+import { pickVenue } from '../supabase/functions/_shared/venues.ts';
 
 // Deterministic RNG for reproducible tests
 function seededRng(seed = 42): () => number {
@@ -32,6 +34,10 @@ function candidate(overrides: Partial<Candidate> = {}): Candidate {
     ageMax: 35,
     radiusKm: 25,
     interests: ['coffee', 'books'],
+    relationshipIntent: 'open',
+    socialEnergy: 'balanced',
+    dateStyle: 'coffee',
+    budgetLevel: 2,
     ...overrides,
   };
 }
@@ -111,6 +117,37 @@ describe('scorePair', () => {
     const s = scorePair(candidate(), man(), () => 1);
     expect(s).toBeGreaterThanOrEqual(0);
     expect(s).toBeLessThanOrEqual(1);
+  });
+
+  it('rewards private intent, energy, date-style, and budget alignment', () => {
+    const me = candidate({
+      relationshipIntent: 'long_term',
+      socialEnergy: 'quiet',
+      dateStyle: 'sober',
+      budgetLevel: 1,
+    });
+    const aligned = man({
+      relationshipIntent: 'long_term',
+      socialEnergy: 'quiet',
+      dateStyle: 'sober',
+      budgetLevel: 1,
+    });
+    const different = man({
+      relationshipIntent: 'figuring_out',
+      socialEnergy: 'lively',
+      dateStyle: 'activity',
+      budgetLevel: 3,
+    });
+    expect(privateCompatibility(me, aligned)).toBe(1);
+    expect(privateCompatibility(me, aligned)).toBeGreaterThan(
+      privateCompatibility(me, different),
+    );
+  });
+
+  it('treats open answers as bridges rather than hard filters', () => {
+    const focused = candidate({ relationshipIntent: 'long_term', dateStyle: 'sober' });
+    const open = man({ relationshipIntent: 'open', dateStyle: 'anything' });
+    expect(privateCompatibility(focused, open)).toBeGreaterThan(0.6);
   });
 });
 
@@ -201,5 +238,65 @@ describe('nextEveningWindow', () => {
     const from = new Date('2026-08-09T05:00:00Z');
     const { start } = nextEveningWindow('UTC', 18, 60, from);
     expect(start.toISOString()).toBe('2026-08-10T18:00:00.000Z');
+  });
+});
+
+describe('nextLocalWeekday', () => {
+  it('returns the next calendar weekday in the launch timezone', () => {
+    const from = new Date('2026-08-09T05:00:00Z'); // Sunday morning in India
+    expect(nextLocalWeekday('Asia/Kolkata', from)).toBe(1); // Monday
+  });
+
+  it('respects the local date near a UTC boundary', () => {
+    const from = new Date('2026-08-09T22:00:00Z'); // Monday 03:30 in India
+    expect(nextLocalWeekday('Asia/Kolkata', from)).toBe(2); // Tuesday
+  });
+});
+
+describe('pickVenue', () => {
+  it('balances venue quality with the lower shared budget', async () => {
+    const fakeFetch: typeof fetch = async () => new Response(JSON.stringify({
+      places: [
+        {
+          displayName: { text: 'The Tiny Filter' },
+          formattedAddress: '12 Quiet Street',
+          location: { latitude: 12.97, longitude: 77.59 },
+          rating: 4.6,
+          priceLevel: 'PRICE_LEVEL_INEXPENSIVE',
+        },
+        {
+          displayName: { text: 'The Marble Room' },
+          formattedAddress: '1 Grand Avenue',
+          location: { latitude: 12.98, longitude: 77.6 },
+          rating: 4.8,
+          priceLevel: 'PRICE_LEVEL_EXPENSIVE',
+        },
+      ],
+    }), { status: 200 });
+
+    const venue = await pickVenue(12.97, 77.59, 'test-key', 1, fakeFetch);
+    expect(venue.name).toBe('The Tiny Filter');
+  });
+
+  it('never selects a permanently closed place', async () => {
+    const fakeFetch: typeof fetch = async () => new Response(JSON.stringify({
+      places: [
+        {
+          displayName: { text: 'Yesterday Cafe' },
+          location: { latitude: 12.97, longitude: 77.59 },
+          rating: 5,
+          businessStatus: 'CLOSED_PERMANENTLY',
+        },
+        {
+          displayName: { text: 'Still Here' },
+          location: { latitude: 12.98, longitude: 77.6 },
+          rating: 4.2,
+          businessStatus: 'OPERATIONAL',
+        },
+      ],
+    }), { status: 200 });
+
+    const venue = await pickVenue(12.97, 77.59, 'test-key', 2, fakeFetch);
+    expect(venue.name).toBe('Still Here');
   });
 });

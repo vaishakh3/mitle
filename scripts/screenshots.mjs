@@ -157,6 +157,8 @@ async function shoot(name, session, { before, waitMs = 3200 } = {}) {
   await page.goto(APP_URL, { waitUntil: 'networkidle' }).catch(() => {});
   await page.waitForTimeout(waitMs);
   if (before) await before(page);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(150);
   await page.screenshot({ path: `${OUT}${name}.png` });
   await context.close();
   console.log(`shot ${name}.png`);

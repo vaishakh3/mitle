@@ -1,7 +1,7 @@
-// The committed match as a physical object: a cream paper ticket stub,
-// perforated, "ADMIT TWO STRANGERS". The one moment the app leaves the night.
+// The committed plan as a clear, physical-feeling object. The graphic language
+// uses Milte's meeting-point geometry without borrowing ticketing theatrics.
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { colors, fonts } from '../lib/theme';
 
 const NOTCH = 22;
@@ -27,7 +27,10 @@ interface TicketProps {
 export function Ticket({ venueName, venueAddress, dateLabel, timeLabel, footer }: TicketProps) {
   return (
     <View style={styles.ticket}>
-      <Text style={styles.admit}>ADMIT TWO STRANGERS</Text>
+      <View style={styles.topline}>
+        <Text style={styles.micro}>MILTE</Text>
+        <Text style={styles.micro}>ONE PERSON · ONE PLACE · ONE HOUR</Text>
+      </View>
       <Text style={styles.venue}>{venueName}</Text>
       {!!venueAddress && <Text style={styles.address}>{venueAddress}</Text>}
 
@@ -55,11 +58,16 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     paddingVertical: 26,
     paddingHorizontal: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.5,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 12,
+    ...Platform.select({
+      web: { boxShadow: '0 12px 28px rgba(0, 0, 0, 0.42)' },
+      default: {
+        shadowColor: '#000',
+        shadowOpacity: 0.5,
+        shadowRadius: 24,
+        shadowOffset: { width: 0, height: 12 },
+        elevation: 12,
+      },
+    }),
   },
   admit: {
     fontFamily: fonts.sansBold,
@@ -68,6 +76,13 @@ const styles = StyleSheet.create({
     color: colors.inkSoft,
     textAlign: 'center',
     marginBottom: 14,
+  },
+  topline: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
+  micro: {
+    fontFamily: fonts.sansBold,
+    fontSize: 9,
+    letterSpacing: 1.7,
+    color: colors.inkSoft,
   },
   venue: {
     fontFamily: fonts.serifBold,

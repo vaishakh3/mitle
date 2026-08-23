@@ -1,35 +1,38 @@
-// MeetCute design system — "midnight editorial".
-// Editorial serif (Fraunces) for romance, utilitarian sans (DM Sans) for UI,
-// candlelit palette on deep ink. The committed match inverts to cream paper.
+// Milte design system — two private yesses around one shared meeting point.
+// The interface is editorial, flat, high-contrast, and deliberately avoids the
+// glossy gradients and floating-card language common to swipe-first products.
 
 export const colors = {
   // night
-  bg: '#141020',
-  bgDeep: '#0D0A16',
-  surface: '#1D1729',
-  surfaceRaised: '#241C33',
-  border: '#332A47',
-  borderSoft: '#2A2240',
+  bg: '#0B0A0D',
+  bgDeep: '#0B0A0D',
+  surface: '#151217',
+  surfaceRaised: '#211B20',
+  surfaceWarm: '#25171C',
+  border: '#4A4148',
+  borderSoft: '#302A2F',
 
   // ink on night
   text: '#F4EDE3',
-  textDim: '#C9BFD6',
-  muted: '#978CAB',
-  faint: '#6E6383',
+  textDim: '#D9D0C7',
+  muted: '#AAA19A',
+  faint: '#8B8380',
 
-  // candlelight
-  rose: '#E85D75',
-  roseDeep: '#C74560',
-  blush: '#F2B8C6',
-  amber: '#E3A857',
-  sage: '#A9C09A',
-  danger: '#E85D5D',
+  // brand and state accents
+  rose: '#A73550',
+  roseDeep: '#84243D',
+  accentText: '#D7A2AD',
+  blush: '#D7A2AD',
+  amber: '#E7A45A',
+  sage: '#7E9471',
+  sky: '#55758C',
+  danger: '#E06C68',
 
   // paper (the ticket)
   paper: '#F4EDE3',
-  paperShade: '#E9DFD0',
-  ink: '#241C33',
-  inkSoft: '#5A4F6E',
+  paperShade: '#DED2C5',
+  ink: '#0B0A0D',
+  inkSoft: '#5D5559',
 };
 
 export const fonts = {
@@ -42,14 +45,15 @@ export const fonts = {
 };
 
 export const type = {
-  display: { fontFamily: fonts.serif, fontSize: 38, lineHeight: 44 },
-  title: { fontFamily: fonts.serif, fontSize: 26, lineHeight: 32 },
+  display: { fontFamily: fonts.serif, fontSize: 42, lineHeight: 47 },
+  title: { fontFamily: fonts.serif, fontSize: 28, lineHeight: 34 },
+  subtitle: { fontFamily: fonts.serif, fontSize: 21, lineHeight: 27 },
   poetic: { fontFamily: fonts.serifItalic, fontSize: 19, lineHeight: 28 },
   body: { fontFamily: fonts.sans, fontSize: 16, lineHeight: 24 },
   small: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 20 },
   label: { fontFamily: fonts.sansBold, fontSize: 11, lineHeight: 16, letterSpacing: 2.2 },
 };
 
-export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 };
+export const spacing = { xxs: 2, xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48, xxxl: 64 };
 
-export const radii = { sm: 10, md: 16, lg: 24, pill: 999 };
+export const radii = { sm: 4, md: 8, lg: 14, xl: 18, pill: 999 };

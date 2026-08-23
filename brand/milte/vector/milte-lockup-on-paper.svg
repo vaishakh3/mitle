@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 256" role="img" aria-labelledby="title desc">
+  <title id="title">Milte primary lockup on warm paper</title>
+  <desc id="desc">Milte symbol, wordmark, and Meet for real tagline.</desc>
+  <rect width="720" height="256" fill="#F4EDE3"/>
+  <g transform="translate(16)">
+    <path fill="#0B0A0D" d="M52 24 92 50C80 72 74 98 74 128s6 56 18 78l-40 26V24Z"/>
+    <path fill="#0B0A0D" d="m204 24-40 26c12 22 18 48 18 78s-6 56-18 78l40 26V24Z"/>
+    <circle cx="128" cy="128" r="16" fill="#A73550"/>
+  </g>
+  <text x="264" y="151" fill="#0B0A0D" font-family="'DM Sans', Arial, sans-serif" font-size="120" font-weight="700" letter-spacing="-6">milte</text>
+  <text x="272" y="201" fill="#0B0A0D" font-family="'DM Sans', Arial, sans-serif" font-size="36" font-weight="500" letter-spacing="-1">meet for real<tspan fill="#A73550">.</tspan></text>
+</svg>

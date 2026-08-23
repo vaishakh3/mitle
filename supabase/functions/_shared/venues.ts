@@ -16,8 +16,18 @@ interface PlacesResult {
     location?: { latitude?: number; longitude?: number };
     rating?: number;
     googleMapsUri?: string;
+    priceLevel?: string;
+    businessStatus?: string;
   }>;
 }
+
+const PRICE_NUMBER: Record<string, number> = {
+  PRICE_LEVEL_FREE: 0,
+  PRICE_LEVEL_INEXPENSIVE: 1,
+  PRICE_LEVEL_MODERATE: 2,
+  PRICE_LEVEL_EXPENSIVE: 3,
+  PRICE_LEVEL_VERY_EXPENSIVE: 4,
+};
 
 export function mockVenue(lat: number, lng: number): Venue {
   return {
@@ -37,6 +47,7 @@ export async function pickVenue(
   lat: number,
   lng: number,
   apiKey: string | undefined,
+  targetBudget = 2,
   fetchFn: typeof fetch = fetch,
 ): Promise<Venue> {
   if (!apiKey) return mockVenue(lat, lng);
@@ -49,7 +60,7 @@ export async function pickVenue(
           'Content-Type': 'application/json',
           'X-Goog-Api-Key': apiKey,
           'X-Goog-FieldMask':
-            'places.displayName,places.formattedAddress,places.location,places.rating,places.googleMapsUri',
+            'places.displayName,places.formattedAddress,places.location,places.rating,places.googleMapsUri,places.priceLevel,places.businessStatus',
         },
         body: JSON.stringify({
           includedTypes: ['cafe'],
@@ -63,11 +74,22 @@ export async function pickVenue(
       if (!res.ok) continue;
       const data = (await res.json()) as PlacesResult;
       const places = (data.places ?? []).filter(
-        (p) => p.location?.latitude != null && p.displayName?.text,
+        (p) => p.location?.latitude != null
+          && p.displayName?.text
+          && p.businessStatus !== 'CLOSED_PERMANENTLY',
       );
       if (places.length === 0) continue;
-      // prefer the best-rated; ties broken by API's popularity ordering
-      const best = [...places].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))[0];
+      // Quality leads, but avoid surprising someone with a venue far outside
+      // the private budget they selected during onboarding.
+      const venueScore = (place: (typeof places)[number]) => {
+        const rating = (place.rating ?? 3.8) / 5;
+        const price = place.priceLevel ? PRICE_NUMBER[place.priceLevel] : undefined;
+        const budgetFit = price == null
+          ? 0.6
+          : 1 - Math.min(Math.abs(price - targetBudget), 3) / 3;
+        return rating * 0.72 + budgetFit * 0.28;
+      };
+      const best = [...places].sort((a, b) => venueScore(b) - venueScore(a))[0];
       return {
         name: best.displayName!.text!,
         address: best.formattedAddress ?? '',

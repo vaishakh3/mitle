@@ -1,8 +1,18 @@
 // Daily matcher (cron). Builds the pool of eligible users, runs the hidden
 // algorithm, inserts pending matches, and notifies both users.
 import { adminClient, checkCronSecret, json } from '../_shared/db.ts';
-import { ageFromBirthdate, Candidate, Gender, pairKey, pairPool } from '../_shared/matching.ts';
+import {
+  ageFromBirthdate,
+  Candidate,
+  DateStyle,
+  Gender,
+  pairKey,
+  pairPool,
+  RelationshipIntent,
+  SocialEnergy,
+} from '../_shared/matching.ts';
 import { sendPush } from '../_shared/push.ts';
+import { nextLocalWeekday } from '../_shared/time.ts';
 
 const ACCEPT_WINDOW_HOURS = 6;
 const LOCATION_MAX_AGE_DAYS = 30;
@@ -10,6 +20,8 @@ const LOCATION_MAX_AGE_DAYS = 30;
 Deno.serve(async (req) => {
   if (!checkCronSecret(req)) return json({ error: 'forbidden' }, 403);
   const db = adminClient();
+  const tz = Deno.env.get('MEETCUTE_TZ') ?? 'Asia/Kolkata';
+  const meetWeekday = nextLocalWeekday(tz);
 
   // 1. Pool: complete, unpaused profiles with a fresh location
   const locationCutoff = new Date(
@@ -18,7 +30,7 @@ Deno.serve(async (req) => {
   const { data: profiles, error: pErr } = await db
     .from('profiles')
     .select(
-      'user_id, birthdate, gender, lat, lng, expo_push_token, preferences(interested_genders, age_min, age_max, radius_km), profile_interests(interest_id)',
+      'user_id, birthdate, gender, lat, lng, expo_push_token, preferences(interested_genders, age_min, age_max, radius_km, available_days, preferred_hour, relationship_intent, social_energy, date_style, budget_level), profile_interests(interest_id)',
     )
     .eq('onboarding_complete', true)
     .eq('is_paused', false)
@@ -49,6 +61,7 @@ Deno.serve(async (req) => {
   for (const p of profiles ?? []) {
     const prefs = Array.isArray(p.preferences) ? p.preferences[0] : p.preferences;
     if (busy.has(p.user_id) || !prefs || !p.birthdate || !p.gender) continue;
+    if (!(prefs.available_days ?? []).includes(meetWeekday)) continue;
     pool.push({
       userId: p.user_id,
       gender: p.gender as Gender,
@@ -62,6 +75,10 @@ Deno.serve(async (req) => {
       interests: (p.profile_interests ?? []).map((i: { interest_id: number }) =>
         String(i.interest_id),
       ),
+      relationshipIntent: prefs.relationship_intent as RelationshipIntent,
+      socialEnergy: prefs.social_energy as SocialEnergy,
+      dateStyle: prefs.date_style as DateStyle,
+      budgetLevel: prefs.budget_level,
     });
   }
 

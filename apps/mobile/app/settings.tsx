@@ -1,78 +1,104 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
-import {
-  Body,
-  Button,
-  Card,
-  Chip,
-  ChipRow,
-  Divider,
-  Input,
-  Label,
-  Screen,
-  Small,
-  Title,
-} from '../components/ui';
-import {
-  deleteAccount,
-  getMyInterestIds,
-  getMyPreferences,
-  getMyProfile,
-  listInterests,
-  setMyInterests,
-  upsertPreferences,
-  upsertProfile,
-} from '../lib/api';
+import React, { useEffect, useRef, useState } from 'react';
+import { Pressable, Switch, Text, View } from 'react-native';
+import { AppHeader } from '../components/AppHeader';
+import { Body, Button, Card, Chip, ChipRow, ChoiceCard, Divider, Field, Input, Label, PageScroll, Screen, Small, Subtitle, Title } from '../components/ui';
+import { deleteAccount, getMyInterestIds, getMyPreferences, getMyProfile, listInterests, setMyInterests, upsertPreferences, upsertProfile } from '../lib/api';
+import { signOut, useAuth } from '../lib/auth';
 import * as dialog from '../lib/dialog';
-import { supabase } from '../lib/supabase';
-import { colors, fonts, spacing } from '../lib/theme';
-import type { Gender } from '../lib/types';
+import { refreshLocation } from '../lib/location';
+import { hourLabel, MEET_HOURS, WEEKDAYS } from '../lib/schedule';
+import { colors, fonts, radii, spacing } from '../lib/theme';
+import type { DateStyle, Gender, RelationshipIntent, SocialEnergy } from '../lib/types';
 
 const GENDERS: Array<{ value: Gender; label: string }> = [
   { value: 'woman', label: 'Women' },
   { value: 'man', label: 'Men' },
-  { value: 'nonbinary', label: 'Non-binary' },
+  { value: 'nonbinary', label: 'Non-binary people' },
 ];
 const RADII_KM = [5, 10, 25, 50];
 const MAX_INTERESTS = 5;
+const RELATIONSHIP_INTENTS: Array<{ value: RelationshipIntent; title: string; body: string }> = [
+  { value: 'long_term', title: 'Something lasting', body: 'Long-term is the direction I am choosing.' },
+  { value: 'open', title: 'Open, if it feels right', body: 'The person matters more than naming the ending now.' },
+  { value: 'figuring_out', title: 'Still figuring it out', body: 'Honest curiosity, without a promised destination.' },
+];
+const SOCIAL_ENERGIES: Array<{ value: SocialEnergy; label: string }> = [
+  { value: 'quiet', label: 'Quiet' },
+  { value: 'balanced', label: 'Balanced' },
+  { value: 'lively', label: 'Lively' },
+];
+const DATE_STYLES: Array<{ value: DateStyle; label: string }> = [
+  { value: 'coffee', label: 'Coffee & conversation' },
+  { value: 'activity', label: 'Something to do' },
+  { value: 'sober', label: 'Always alcohol-free' },
+  { value: 'anything', label: 'Surprise me' },
+];
+
+function SettingsLink({ title, body, onPress }: { title: string; body: string; onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm, minHeight: 48 }}>
+      <View style={{ flex: 1, gap: 2 }}><Body style={{ color: colors.text, fontFamily: fonts.sansBold }}>{title}</Body><Small>{body}</Small></View>
+      <Text style={{ color: colors.muted, fontFamily: fonts.sansBold, fontSize: 18 }}>→</Text>
+    </Pressable>
+  );
+}
 
 export default function Settings() {
-  const qc = useQueryClient();
-  const profileQ = useQuery({ queryKey: ['profile'], queryFn: getMyProfile });
-  const prefsQ = useQuery({ queryKey: ['preferences'], queryFn: getMyPreferences });
-  const interestsQ = useQuery({ queryKey: ['interests'], queryFn: listInterests });
-  const myInterestsQ = useQuery({ queryKey: ['myInterests'], queryFn: getMyInterestIds });
-
+  const queryClient = useQueryClient();
+  const { session } = useAuth();
+  const profileQuery = useQuery({ queryKey: ['profile'], queryFn: getMyProfile });
+  const preferencesQuery = useQuery({ queryKey: ['preferences'], queryFn: getMyPreferences });
+  const interestsQuery = useQuery({ queryKey: ['interests'], queryFn: listInterests });
+  const myInterestsQuery = useQuery({ queryKey: ['myInterests'], queryFn: getMyInterestIds });
   const [hint, setHint] = useState('');
   const [paused, setPaused] = useState(false);
   const [interestedIn, setInterestedIn] = useState<Gender[]>([]);
   const [radius, setRadius] = useState(10);
   const [ageMin, setAgeMin] = useState('21');
   const [ageMax, setAgeMax] = useState('35');
+  const [availableDays, setAvailableDays] = useState<number[]>([]);
+  const [preferredHour, setPreferredHour] = useState(19);
+  const [relationshipIntent, setRelationshipIntent] = useState<RelationshipIntent>('open');
+  const [socialEnergy, setSocialEnergy] = useState<SocialEnergy>('balanced');
+  const [dateStyle, setDateStyle] = useState<DateStyle>('coffee');
+  const [budgetLevel, setBudgetLevel] = useState(2);
   const [picked, setPicked] = useState<number[]>([]);
+  const [locationBusy, setLocationBusy] = useState(false);
+  const profileInitialized = useRef(false);
+  const preferencesInitialized = useRef(false);
+  const interestsInitialized = useRef(false);
+  const agesValid = Number(ageMin) >= 18 && Number(ageMax) <= 99 && Number(ageMax) >= Number(ageMin);
 
-  const agesValid =
-    Number(ageMin) >= 18 && Number(ageMax) <= 99 && Number(ageMax) >= Number(ageMin);
-
   useEffect(() => {
-    if (profileQ.data) {
-      setHint(profileQ.data.spot_hint);
-      setPaused(profileQ.data.is_paused);
+    if (profileQuery.data && !profileInitialized.current) {
+      profileInitialized.current = true;
+      setHint(profileQuery.data.spot_hint);
+      setPaused(profileQuery.data.is_paused);
     }
-  }, [profileQ.data]);
+  }, [profileQuery.data]);
   useEffect(() => {
-    if (prefsQ.data) {
-      setInterestedIn(prefsQ.data.interested_genders);
-      setRadius(prefsQ.data.radius_km);
-      setAgeMin(String(prefsQ.data.age_min));
-      setAgeMax(String(prefsQ.data.age_max));
+    if (preferencesQuery.data && !preferencesInitialized.current) {
+      preferencesInitialized.current = true;
+      setInterestedIn(preferencesQuery.data.interested_genders);
+      setRadius(preferencesQuery.data.radius_km);
+      setAgeMin(String(preferencesQuery.data.age_min));
+      setAgeMax(String(preferencesQuery.data.age_max));
+      setAvailableDays(preferencesQuery.data.available_days ?? [0, 1, 2, 3, 4, 5, 6]);
+      setPreferredHour(preferencesQuery.data.preferred_hour ?? 18);
+      setRelationshipIntent(preferencesQuery.data.relationship_intent ?? 'open');
+      setSocialEnergy(preferencesQuery.data.social_energy ?? 'balanced');
+      setDateStyle(preferencesQuery.data.date_style ?? 'coffee');
+      setBudgetLevel(preferencesQuery.data.budget_level ?? 2);
     }
-  }, [prefsQ.data]);
+  }, [preferencesQuery.data]);
   useEffect(() => {
-    if (myInterestsQ.data) setPicked(myInterestsQ.data);
-  }, [myInterestsQ.data]);
+    if (myInterestsQuery.data && !interestsInitialized.current) {
+      interestsInitialized.current = true;
+      setPicked(myInterestsQuery.data);
+    }
+  }, [myInterestsQuery.data]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -82,175 +108,138 @@ export default function Settings() {
         radius_km: radius,
         age_min: Number(ageMin),
         age_max: Number(ageMax),
+        available_days: availableDays,
+        preferred_hour: preferredHour,
+        relationship_intent: relationshipIntent,
+        social_energy: socialEnergy,
+        date_style: dateStyle,
+        budget_level: budgetLevel,
       });
       await setMyInterests(picked);
     },
     onSuccess: () => {
-      qc.invalidateQueries();
-      dialog.alert('Saved', 'Changes apply from the next daily match.');
+      queryClient.invalidateQueries();
+      dialog.alert('Saved', 'Your next draw will use these choices.');
     },
-    onError: (err) => dialog.alert('Hmm', err instanceof Error ? err.message : String(err)),
+    onError: (error) => dialog.alert('We could not save that', error instanceof Error ? error.message : String(error)),
   });
 
+  async function updateLocation() {
+    setLocationBusy(true);
+    const ok = await refreshLocation();
+    setLocationBusy(false);
+    dialog.alert(ok ? 'Location refreshed' : 'Location is still off', ok ? 'Your next draw will use this area.' : 'Check system permissions and try again.');
+  }
+
   async function confirmDelete() {
-    const ok = await dialog.confirm(
-      'Delete your account?',
-      'Profile, preferences, any active match — gone. No undo.',
-      'Delete forever',
-      true,
-    );
-    if (!ok) return;
+    const first = await dialog.confirm('Delete your account?', 'Your profile, preferences, and active match will be removed. Minimal safety records may be retained where necessary.', 'Continue', true);
+    if (!first) return;
+    const final = await dialog.confirm('This cannot be undone', 'If you are sure, delete Milte permanently.', 'Delete forever', true);
+    if (!final) return;
     try {
       await deleteAccount();
       router.replace('/sign-in');
-    } catch (err) {
-      dialog.alert('Hmm', err instanceof Error ? err.message : String(err));
+    } catch (error) {
+      dialog.alert('We could not delete the account', error instanceof Error ? error.message : String(error));
     }
   }
 
+  const toggleDay = (day: number) => setAvailableDays((prev) => prev.includes(day) ? prev.filter((value) => value !== day) : [...prev, day]);
+  const loading = profileQuery.isLoading || preferencesQuery.isLoading || interestsQuery.isLoading || myInterestsQuery.isLoading;
+  const loadError = profileQuery.isError || preferencesQuery.isError || interestsQuery.isError || myInterestsQuery.isError;
+
+  const retryAll = () => Promise.all([
+    profileQuery.refetch(),
+    preferencesQuery.refetch(),
+    interestsQuery.refetch(),
+    myInterestsQuery.refetch(),
+  ]);
+
   return (
     <Screen>
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: spacing.lg,
-          paddingTop: spacing.xl + spacing.sm,
-          paddingBottom: spacing.sm,
-        }}
-      >
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Text style={{ fontSize: 13, fontFamily: fonts.sansBold, letterSpacing: 2, color: colors.muted }}>
-            ← BACK
-          </Text>
-        </Pressable>
-      </View>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.sm, gap: spacing.md, paddingBottom: spacing.xxl }}
-      >
-        <Title>Settings</Title>
+      <AppHeader back title="Your corner" />
+      <PageScroll style={{ flex: 1 }} contentContainerStyle={{ paddingTop: spacing.sm, gap: spacing.lg }}>
+        <View style={{ gap: spacing.sm }}>
+          <Title>Make the maybe fit your life.</Title>
+          <Small>{session?.user.email}</Small>
+        </View>
 
-        <Card>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flex: 1, paddingRight: spacing.md }}>
-              <Body style={{ color: colors.text }}>Pause matching</Body>
-              <Small>Take a breath. No new matches while paused.</Small>
-            </View>
-            <Switch
-              value={paused}
-              onValueChange={setPaused}
-              trackColor={{ true: colors.rose, false: colors.border }}
-              thumbColor={colors.text}
-            />
-          </View>
-        </Card>
+        {loadError ? (
+          <Card accessibilityRole="alert" style={{ gap: spacing.md }}>
+            <Subtitle>Your choices could not be loaded.</Subtitle>
+            <Body>Nothing has been changed. Check your connection and try again.</Body>
+            <Button title="Try again" onPress={retryAll} />
+          </Card>
+        ) : loading ? <Card accessibilityLiveRegion="polite"><Body>Loading your choices…</Body></Card> : (
+          <>
+            <Card tone={paused ? 'warm' : 'default'}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }}>
+                <View style={{ flex: 1, gap: 3 }}><Subtitle>{paused ? 'Matching is paused' : 'Matching is on'}</Subtitle><Small>{paused ? 'No new possibilities until you return.' : 'Only on the days you choose below.'}</Small></View>
+                <Switch accessibilityLabel="Pause matching" value={paused} onValueChange={setPaused} trackColor={{ true: colors.rose, false: colors.border }} thumbColor={colors.text} />
+              </View>
+            </Card>
 
-        <Card>
-          <Label>Your spot hint</Label>
-          <Small>The one line a committed match gets. Make it worth looking for.</Small>
-          <View style={{ height: spacing.sm }} />
-          <Input
-            value={hint}
-            onChangeText={setHint}
-            multiline
-            style={{ minHeight: 70 }}
-            placeholder='"Red scarf, probably reading a book"'
-          />
-        </Card>
+            <View style={{ gap: spacing.sm }}><Label>Availability</Label><Card style={{ gap: spacing.lg }}>
+              <Field label="Days that usually work">
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 6 }}>
+                  {WEEKDAYS.map((day) => <Pressable key={day.value} accessibilityRole="checkbox" accessibilityLabel={day.label} accessibilityState={{ checked: availableDays.includes(day.value) }} onPress={() => toggleDay(day.value)} style={{ flex: 1, height: 48, borderRadius: radii.md, borderWidth: 1, borderColor: availableDays.includes(day.value) ? colors.paper : colors.border, backgroundColor: availableDays.includes(day.value) ? colors.paper : colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: availableDays.includes(day.value) ? colors.ink : colors.textDim, fontFamily: fonts.sansBold }}>{day.short}</Text></Pressable>)}
+                </View>
+              </Field>
+              <Field label="Best start time"><ChipRow>{MEET_HOURS.map((hour) => <Chip key={hour} label={hourLabel(hour)} selected={preferredHour === hour} onPress={() => setPreferredHour(hour)} />)}</ChipRow></Field>
+            </Card></View>
 
-        <Card>
-          <Label>Interested in</Label>
-          <View style={{ height: spacing.sm }} />
-          <ChipRow>
-            {GENDERS.map((g) => (
-              <Chip
-                key={g.value}
-                label={g.label}
-                selected={interestedIn.includes(g.value)}
-                onPress={() =>
-                  setInterestedIn((prev) =>
-                    prev.includes(g.value)
-                      ? prev.filter((x) => x !== g.value)
-                      : [...prev, g.value],
-                  )
-                }
-              />
-            ))}
-          </ChipRow>
+            <View style={{ gap: spacing.sm }}><Label>Private fit</Label><Card style={{ gap: spacing.lg }}>
+              <Field label="What I am open to"><View accessibilityRole="radiogroup" style={{ gap: spacing.sm }}>{RELATIONSHIP_INTENTS.map((item) => <ChoiceCard key={item.value} title={item.title} body={item.body} selected={relationshipIntent === item.value} onPress={() => setRelationshipIntent(item.value)} />)}</View></Field>
+              <Divider />
+              <Field label="My social energy"><ChipRow>{SOCIAL_ENERGIES.map((item) => <Chip key={item.value} label={item.label} selected={socialEnergy === item.value} onPress={() => setSocialEnergy(item.value)} />)}</ChipRow></Field>
+              <Divider />
+              <Field label="A first meet should feel like"><ChipRow>{DATE_STYLES.map((item) => <Chip key={item.value} label={item.label} selected={dateStyle === item.value} onPress={() => setDateStyle(item.value)} />)}</ChipRow></Field>
+              <Divider />
+              <Field label="Comfortable spend" hint="The lower shared comfort guides the venue."><ChipRow>{[1, 2, 3].map((value) => <Chip key={value} label={'₹'.repeat(value)} selected={budgetLevel === value} onPress={() => setBudgetLevel(value)} />)}</ChipRow></Field>
+              <Small>These answers are used only for matching and venue fit. They never become a visible profile.</Small>
+            </Card></View>
+
+            <View style={{ gap: spacing.sm }}><Label>Your boundaries</Label><Card>
+              <Field label="Interested in"><ChipRow>{GENDERS.map((item) => <Chip key={item.value} label={item.label} selected={interestedIn.includes(item.value)} onPress={() => setInterestedIn((prev) => prev.includes(item.value) ? prev.filter((value) => value !== item.value) : [...prev, item.value])} />)}</ChipRow></Field>
+              <Divider />
+              <Field label="Age range"><View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}><Input accessibilityLabel="Minimum age" style={{ flex: 1, textAlign: 'center' }} keyboardType="number-pad" maxLength={2} value={ageMin} onChangeText={setAgeMin} /><Small>to</Small><Input accessibilityLabel="Maximum age" style={{ flex: 1, textAlign: 'center' }} keyboardType="number-pad" maxLength={2} value={ageMax} onChangeText={setAgeMax} /></View>{!agesValid && <Small style={{ color: colors.danger }}>Use an 18–99 range, from lower to higher.</Small>}</Field>
+              <Divider />
+              <Field label="Maximum distance"><ChipRow>{RADII_KM.map((value) => <Chip key={value} label={`${value} km`} selected={radius === value} onPress={() => setRadius(value)} />)}</ChipRow></Field>
+            </Card></View>
+
+            <View style={{ gap: spacing.sm }}><Label>Your clue</Label><Card><Field label="Spot hint" hint={`${hint.trim().length}/120 characters`}><Input value={hint} onChangeText={setHint} multiline maxLength={120} style={{ minHeight: 88, textAlignVertical: 'top' }} placeholder="Red scarf, probably reading a book" /></Field></Card></View>
+
+            <View style={{ gap: spacing.sm }}><Label>Common ground</Label><Card><ChipRow>{(interestsQuery.data ?? []).map((item) => <Chip key={item.id} label={item.label} selected={picked.includes(item.id)} onPress={() => setPicked((prev) => prev.includes(item.id) ? prev.filter((value) => value !== item.id) : prev.length < MAX_INTERESTS ? [...prev, item.id] : prev)} />)}</ChipRow><Small style={{ marginTop: spacing.md }}>{picked.length} of {MAX_INTERESTS} chosen</Small></Card></View>
+
+            <Button title="Save my choices" onPress={() => save.mutate()} loading={save.isPending} disabled={!agesValid || !interestedIn.length || !availableDays.length || hint.trim().length < 8 || !picked.length} />
+          </>
+        )}
+
+        <View style={{ gap: spacing.sm }}><Label>Location, safety & privacy</Label><Card>
+          <SettingsLink title="Refresh my location" body="Use this area for future matches." onPress={updateLocation} />
+          {locationBusy && <Small style={{ color: colors.amber }}>Finding your area…</Small>}
           <Divider />
-          <Label>Between the ages of</Label>
-          <View style={{ height: spacing.sm }} />
-          <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
-            <Input
-              style={{ flex: 1, textAlign: 'center' }}
-              keyboardType="number-pad"
-              maxLength={2}
-              value={ageMin}
-              onChangeText={setAgeMin}
-            />
-            <Small>and</Small>
-            <Input
-              style={{ flex: 1, textAlign: 'center' }}
-              keyboardType="number-pad"
-              maxLength={2}
-              value={ageMax}
-              onChangeText={setAgeMax}
-            />
-          </View>
-          {!agesValid && (
-            <Small style={{ color: colors.danger, marginTop: spacing.xs }}>18+, and in order.</Small>
-          )}
+          <SettingsLink title="Safety center" body="Before, during, and after a meet." onPress={() => router.push('/safety')} />
           <Divider />
-          <Label>Within</Label>
-          <View style={{ height: spacing.sm }} />
-          <ChipRow>
-            {RADII_KM.map((r) => (
-              <Chip key={r} label={`${r} km`} selected={radius === r} onPress={() => setRadius(r)} />
-            ))}
-          </ChipRow>
-        </Card>
+          <SettingsLink title="Your data & privacy" body="What we keep, reveal, and delete." onPress={() => router.push('/privacy')} />
+          <Divider />
+          <SettingsLink title="Terms of Use" body="The agreement behind the introduction." onPress={() => router.push('/terms')} />
+          <Divider />
+          <SettingsLink title="Community Rules" body="Consent, respect, and easy exits." onPress={() => router.push('/community')} />
+          <Divider />
+          <SettingsLink title="Child safety standards" body="18+ access and zero-tolerance rules." onPress={() => router.push('/child-safety')} />
+          <Divider />
+          <SettingsLink title="Support" body="Account, privacy, safety, or technical help." onPress={() => router.push('/support')} />
+        </Card></View>
 
-        <Card>
-          <Label>Interests</Label>
-          <View style={{ height: spacing.sm }} />
-          <ChipRow>
-            {(interestsQ.data ?? []).map((i) => (
-              <Chip
-                key={i.id}
-                label={`${i.emoji} ${i.label}`}
-                selected={picked.includes(i.id)}
-                onPress={() =>
-                  setPicked((prev) =>
-                    prev.includes(i.id)
-                      ? prev.filter((x) => x !== i.id)
-                      : prev.length < MAX_INTERESTS
-                        ? [...prev, i.id]
-                        : prev,
-                  )
-                }
-              />
-            ))}
-          </ChipRow>
-        </Card>
-
-        <Button
-          title="Save changes"
-          onPress={() => save.mutate()}
-          loading={save.isPending}
-          disabled={!agesValid || interestedIn.length === 0}
-        />
-        <Button
-          title="Sign out"
-          variant="ghost"
-          onPress={async () => {
-            await supabase.auth.signOut();
-            router.replace('/sign-in');
-          }}
-        />
-        <Button title="Delete account" variant="danger" onPress={confirmDelete} />
-      </ScrollView>
+        <View style={{ gap: spacing.sm }}><Label>Account</Label><Card>
+          <SettingsLink title="Sign out" body="Your choices stay here for next time." onPress={async () => { await signOut(); router.replace('/sign-in'); }} />
+          <Divider />
+          <SettingsLink title="Delete account" body="Remove your profile and active match." onPress={confirmDelete} />
+          <Divider />
+          <SettingsLink title="Deletion instructions" body="A public explanation of what is removed." onPress={() => router.push('/delete-account')} />
+        </Card></View>
+      </PageScroll>
     </Screen>
   );
 }

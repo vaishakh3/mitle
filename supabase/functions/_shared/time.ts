@@ -48,3 +48,13 @@ export function nextEveningWindow(
   const start = new Date(naive.getTime() - tzOffsetMinutes(tz, naive) * 60000);
   return { start, end: new Date(start.getTime() + durationMin * 60000) };
 }
+
+/** The local weekday (0=Sunday) for the next calendar day in `tz`. */
+export function nextLocalWeekday(tz: string, from: Date = new Date()): number {
+  const tomorrow = new Date(from.getTime() + 24 * 3600 * 1000);
+  const weekday = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    weekday: 'short',
+  }).format(tomorrow);
+  return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(weekday);
+}

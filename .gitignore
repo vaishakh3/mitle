@@ -7,4 +7,13 @@ supabase/.temp/
 supabase/functions/.env
 apps/mobile/.expo/
 apps/mobile/dist/
+apps/mobile/dist-smoke/
+apps/mobile/android/
+apps/mobile/.eas/
+release/
+.aws-sam/
+*.jks
+*.keystore
+play-service-account*.json
+google-services.json
 *.log

@@ -1,0 +1,573 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Milte production backend and web hosting on AWS
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    AllowedPattern: '^[a-z0-9-]+$'
+  LaunchTimezone:
+    Type: String
+    Default: Asia/Kolkata
+  AlertEmail:
+    Type: String
+    Default: ''
+    Description: Optional address for AWS Budget alerts. Leave blank to create no subscription.
+  AuthEmailIdentityArn:
+    Type: String
+    Default: ''
+    Description: Verified Amazon SES email/domain identity ARN for Cognito delivery. Leave blank only for local or pre-launch stacks.
+  AuthEmailFrom:
+    Type: String
+    Default: ''
+    Description: Human-readable From address backed by AuthEmailIdentityArn, for example Milte <support@example.com>.
+  AllowedWebOrigins:
+    Type: CommaDelimitedList
+    Default: https://d1w5h7ki7ldbx2.cloudfront.net
+    Description: Exact browser origins allowed to call the API. Native apps do not use CORS.
+
+Conditions:
+  HasAlertEmail: !Not [!Equals [!Ref AlertEmail, '']]
+  HasAuthEmailIdentity: !And
+    - !Not [!Equals [!Ref AuthEmailIdentityArn, '']]
+    - !Not [!Equals [!Ref AuthEmailFrom, '']]
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Architectures: [arm64]
+    MemorySize: 256
+    Timeout: 20
+    Tracing: Active
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref MilteTable
+        USER_POOL_ID: !Ref UserPool
+        MILTE_TZ: !Ref LaunchTimezone
+        APP_ENV: !Ref Environment
+        ALLOW_VENUE_FALLBACK: 'false'
+
+Resources:
+  MilteTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Sub milte-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      DeletionProtectionEnabled: true
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: EntityIndex
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+      Tags:
+        - Key: Project
+          Value: Milte
+        - Key: Environment
+          Value: !Ref Environment
+
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      UserPoolName: !Sub milte-${Environment}
+      UserPoolTier: ESSENTIALS
+      DeletionProtection: ACTIVE
+      UsernameAttributes: [email]
+      AutoVerifiedAttributes: [email]
+      UserAttributeUpdateSettings:
+        AttributesRequireVerificationBeforeUpdate: [email]
+      MfaConfiguration: 'OFF'
+      Policies:
+        SignInPolicy:
+          # Existing Cognito pools require PASSWORD to remain enabled when it was
+          # previously configured. Milte's client still initiates EMAIL_OTP only.
+          AllowedFirstAuthFactors: [EMAIL_OTP, PASSWORD]
+      EmailConfiguration: !If
+        - HasAuthEmailIdentity
+        - EmailSendingAccount: DEVELOPER
+          From: !Ref AuthEmailFrom
+          SourceArn: !Ref AuthEmailIdentityArn
+        - EmailSendingAccount: COGNITO_DEFAULT
+      EmailAuthenticationMessage: 'Milte: your private sign-in code is {####}. It expires soon.'
+      EmailAuthenticationSubject: Your Milte code
+      VerificationMessageTemplate:
+        DefaultEmailOption: CONFIRM_WITH_CODE
+        EmailMessage: 'Milte: your private confirmation code is {####}. It expires soon.'
+        EmailSubject: Confirm your Milte account
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: false
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+      UserPoolTags:
+        Project: Milte
+        Environment: !Ref Environment
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub milte-${Environment}-mobile-web
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      PreventUserExistenceErrors: ENABLED
+      EnableTokenRevocation: true
+      ExplicitAuthFlows:
+        - ALLOW_USER_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      AccessTokenValidity: 1
+      IdTokenValidity: 1
+      RefreshTokenValidity: 30
+      TokenValidityUnits:
+        AccessToken: hours
+        IdToken: hours
+        RefreshToken: days
+
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: '$default'
+      CorsConfiguration:
+        AllowOrigins: !Ref AllowedWebOrigins
+        AllowHeaders: [Authorization, Content-Type]
+        AllowMethods: [GET, POST, PUT, DELETE, OPTIONS]
+        MaxAge: 600
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 40
+        ThrottlingRateLimit: 20
+      AccessLogSettings:
+        DestinationArn: !GetAtt ApiAccessLogGroup.Arn
+        Format: '{"requestId":"$context.requestId","routeKey":"$context.routeKey","status":"$context.status","responseLength":"$context.responseLength","integrationError":"$context.integrationErrorMessage"}'
+      Auth:
+        DefaultAuthorizer: CognitoJwtAuthorizer
+        Authorizers:
+          CognitoJwtAuthorizer:
+            IdentitySource: '$request.header.Authorization'
+            JwtConfiguration:
+              issuer: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}
+              audience:
+                - !Ref UserPoolClient
+
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub milte-${Environment}-api
+      EventInvokeConfig:
+        MaximumEventAgeInSeconds: 3600
+        MaximumRetryAttempts: 2
+        DestinationConfig:
+          OnFailure:
+            Type: SQS
+      CodeUri: app/
+      Handler: src/handler.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MilteTable
+        - Statement:
+            - Effect: Allow
+              Action: cognito-idp:AdminDeleteUser
+              Resource: !GetAtt UserPool.Arn
+            - Effect: Allow
+              Action: geo-places:SearchNearby
+              Resource: '*'
+      Events:
+        Preflight:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /{proxy+}
+            Method: OPTIONS
+            Auth:
+              Authorizer: NONE
+        ApiProxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /{proxy+}
+            Method: ANY
+        Health:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /health
+            Method: GET
+            Auth:
+              Authorizer: NONE
+        PublicSupport:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /support
+            Method: POST
+            Auth:
+              Authorizer: NONE
+        DailyMatch:
+          Type: ScheduleV2
+          Properties:
+            Name: !Sub milte-${Environment}-daily-match
+            Description: Create tomorrow's anonymous pairings each morning
+            ScheduleExpression: cron(0 8 * * ? *)
+            ScheduleExpressionTimezone: !Ref LaunchTimezone
+            FlexibleTimeWindow:
+              Mode: 'OFF'
+            RetryPolicy:
+              MaximumEventAgeInSeconds: 3600
+              MaximumRetryAttempts: 2
+            DeadLetterConfig:
+              Type: SQS
+            Input: '{"job":"daily-match"}'
+        Housekeeping:
+          Type: ScheduleV2
+          Properties:
+            Name: !Sub milte-${Environment}-housekeeping
+            Description: Expire decisions, close meet windows, and send reminders
+            ScheduleExpression: rate(15 minutes)
+            FlexibleTimeWindow:
+              Mode: 'OFF'
+            RetryPolicy:
+              MaximumEventAgeInSeconds: 900
+              MaximumRetryAttempts: 2
+            DeadLetterConfig:
+              Type: SQS
+            Input: '{"job":"housekeeping"}'
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints: [src/handler.ts]
+        Bundle: true
+        Minify: true
+        Sourcemap: false
+        Target: es2022
+
+  ApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ApiFunction}
+      RetentionInDays: 30
+
+  ApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    Properties:
+      LogGroupName: !Sub /aws/apigateway/milte-${Environment}
+      RetentionInDays: 30
+
+  OperationsTopic:
+    Type: AWS::SNS::Topic
+    Condition: HasAlertEmail
+    Properties:
+      TopicName: !Sub milte-${Environment}-operations
+      Subscription:
+        - Endpoint: !Ref AlertEmail
+          Protocol: email
+
+  FunctionErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub milte-${Environment}-lambda-errors
+      AlarmDescription: Milte API or scheduled work returned an error
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ApiFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlertEmail, [!Ref OperationsTopic], !Ref AWS::NoValue]
+
+  FunctionThrottleAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub milte-${Environment}-lambda-throttles
+      AlarmDescription: Milte Lambda invocations were throttled
+      Namespace: AWS/Lambda
+      MetricName: Throttles
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ApiFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlertEmail, [!Ref OperationsTopic], !Ref AWS::NoValue]
+
+  FunctionDurationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub milte-${Environment}-lambda-duration
+      AlarmDescription: Milte Lambda p95 duration is approaching its timeout
+      Namespace: AWS/Lambda
+      MetricName: Duration
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ApiFunction
+      ExtendedStatistic: p95
+      Period: 300
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 2
+      Threshold: 15000
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlertEmail, [!Ref OperationsTopic], !Ref AWS::NoValue]
+
+  ApiServerErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub milte-${Environment}-api-5xx
+      AlarmDescription: Milte HTTP API returned server errors
+      Namespace: AWS/ApiGateway
+      MetricName: 5xx
+      Dimensions:
+        - Name: ApiId
+          Value: !Ref HttpApi
+        - Name: Stage
+          Value: '$default'
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlertEmail, [!Ref OperationsTopic], !Ref AWS::NoValue]
+
+  DynamoSystemErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub milte-${Environment}-dynamodb-system-errors
+      AlarmDescription: DynamoDB returned system errors for Milte
+      Namespace: AWS/DynamoDB
+      MetricName: SystemErrors
+      Dimensions:
+        - Name: TableName
+          Value: !Ref MilteTable
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlertEmail, [!Ref OperationsTopic], !Ref AWS::NoValue]
+
+  SchedulerFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub milte-${Environment}-scheduler-failures
+      AlarmDescription: EventBridge Scheduler could not deliver a scheduled Milte job
+      Namespace: AWS/Scheduler
+      MetricName: InvocationDroppedCount
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If [HasAlertEmail, [!Ref OperationsTopic], !Ref AWS::NoValue]
+
+  MonthlyBudget:
+    Type: AWS::Budgets::Budget
+    Condition: HasAlertEmail
+    Properties:
+      Budget:
+        BudgetName: !Sub milte-${Environment}-monthly
+        BudgetType: COST
+        TimeUnit: MONTHLY
+        BudgetLimit:
+          Amount: 10
+          Unit: USD
+        CostFilters:
+          TagKeyValue:
+            - user:Project$Milte
+      NotificationsWithSubscribers:
+        - Notification:
+            ComparisonOperator: GREATER_THAN
+            NotificationType: FORECASTED
+            Threshold: 50
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - Address: !Ref AlertEmail
+              SubscriptionType: EMAIL
+        - Notification:
+            ComparisonOperator: GREATER_THAN
+            NotificationType: ACTUAL
+            Threshold: 90
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - Address: !Ref AlertEmail
+              SubscriptionType: EMAIL
+
+  WebBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub milte-${Environment}-web-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+        - Key: Project
+          Value: Milte
+        - Key: Environment
+          Value: !Ref Environment
+
+  WebOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub milte-${Environment}-web
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  WebSecurityHeaders:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub milte-${Environment}-security-headers
+        SecurityHeadersConfig:
+          ContentTypeOptions:
+            Override: true
+          FrameOptions:
+            FrameOption: DENY
+            Override: true
+          ReferrerPolicy:
+            ReferrerPolicy: strict-origin-when-cross-origin
+            Override: true
+          StrictTransportSecurity:
+            AccessControlMaxAgeSec: 31536000
+            IncludeSubdomains: true
+            Override: true
+          XSSProtection:
+            ModeBlock: true
+            Protection: true
+            Override: true
+          ContentSecurityPolicy:
+            ContentSecurityPolicy: !Sub "default-src 'self'; connect-src 'self' https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix} https://cognito-idp.${AWS::Region}.${AWS::URLSuffix}; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+            Override: true
+        CustomHeadersConfig:
+          Items:
+            - Header: Permissions-Policy
+              Value: camera=(), microphone=(), geolocation=(self)
+              Override: true
+
+  WebDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: !Sub Milte ${Environment} web app
+        Enabled: true
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        DefaultRootObject: index.html
+        PriceClass: PriceClass_100
+        Origins:
+          - Id: WebBucketOrigin
+            DomainName: !GetAtt WebBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt WebOriginAccessControl.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: WebBucketOrigin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD, OPTIONS]
+          Compress: true
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          ResponseHeadersPolicyId: !Ref WebSecurityHeaders
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 0
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+            ErrorCachingMinTTL: 0
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+          MinimumProtocolVersion: TLSv1.2_2021
+      Tags:
+        - Key: Project
+          Value: Milte
+        - Key: Environment
+          Value: !Ref Environment
+
+  WebBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref WebBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudFrontRead
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub ${WebBucket.Arn}/*
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${WebDistribution}
+
+Outputs:
+  ApiUrl:
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}
+  UserPoolId:
+    Value: !Ref UserPool
+  UserPoolClientId:
+    Value: !Ref UserPoolClient
+  AuthEmailMode:
+    Value: !If [HasAuthEmailIdentity, SES, COGNITO_DEFAULT]
+  TableName:
+    Value: !Ref MilteTable
+  WebBucketName:
+    Value: !Ref WebBucket
+  WebDistributionId:
+    Value: !Ref WebDistribution
+  WebUrl:
+    Value: !Sub https://${WebDistribution.DomainName}

@@ -6,12 +6,12 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { colors, fonts, spacing } from '../lib/theme';
 import { Body, Card, Label } from './ui';
 
-const KEY = 'mc.howItWorks.dismissed';
+const KEY = 'milte.howItWorks.dismissed';
 
 const BEATS = [
-  { n: 'I', text: 'Every day, one stranger nearby is chosen for you. No browsing. No photos.' },
-  { n: 'II', text: 'Two yeses, and we book the meet-cute: a cafe, an hour, a hint to find each other.' },
-  { n: 'III', text: 'When the hour ends, the match is gone for good. The rest happens in real life.' },
+  { n: 'I', text: 'On an available day, one nearby stranger may be chosen. No feed and no popularity contest.' },
+  { n: 'II', text: 'Two yeses reveal a named public place, one hour, and a private clue to find each other.' },
+  { n: 'III', text: 'Day-of signals prevent guessing. When the hour ends, the live match is gone.' },
 ];
 
 export function HowItWorks() {
@@ -26,7 +26,7 @@ export function HowItWorks() {
   return (
     <Animated.View entering={FadeInDown.duration(700)} style={{ marginBottom: spacing.lg }}>
       <Card>
-        <Label style={{ color: colors.rose }}>The ritual</Label>
+        <Label style={{ color: colors.accentText }}>How a maybe becomes a meeting</Label>
         <View style={{ height: spacing.sm }} />
         {BEATS.map((b) => (
           <View key={b.n} style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.sm }}>
@@ -45,12 +45,14 @@ export function HowItWorks() {
           </View>
         ))}
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss how Milte works"
           onPress={() => {
             AsyncStorage.setItem(KEY, '1');
             setVisible(false);
           }}
           hitSlop={8}
-          style={{ alignSelf: 'flex-end', marginTop: spacing.xs }}
+          style={{ alignSelf: 'flex-end', marginTop: spacing.xs, minHeight: 48, justifyContent: 'center' }}
         >
           <Text
             style={{

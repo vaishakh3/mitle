@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
         .map((to) => ({
           to,
           title: 'This story now lives offline',
-          body: 'Your match has faded from the app. If you met — the rest is up to you two.',
+          body: 'Your live match has faded. Tell us if you met; a Second Chapter opens only on two yeses.',
         })),
     );
   }
@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
         .map((to) => ({
           to,
           title: 'Almost time',
-          body: `${m.venue_name ?? 'Your spot'} — the window opens soon. Go get your maybe.`,
+          body: `${m.venue_name ?? 'Your spot'} — the window opens soon. Check your promise and travel safely.`,
         })),
     );
   }
