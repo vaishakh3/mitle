@@ -69,7 +69,7 @@ Milte is machine-ready when every non-human item below is checked, the verificat
 - [x] Upload version code 5 with the first-run authentication reliability fix, pass Play bundle/device validation, and submit the 100% Alpha closed-test rollout to Google review.
 - [x] Upload version code 6 with the Cognito eight-digit-code and narrow-screen sign-in fixes, confirm zero supported-device loss, and submit the 100% Alpha closed-test rollout to Google review.
 - [x] Build version code 7 with the light Milte identity, anonymous immutable usernames, eight character avatars, corrected avatar cropping/selection overlays, symmetric header geometry, compact-width layouts, and the final responsive visual audit.
-- [ ] Save and submit the Play-accepted version code 7 bundle as a 100% Alpha closed-test rollout. The exact AAB, notes, device-compatibility preview, and release form are prepared; the final representational submission is awaiting action-time confirmation.
+- [x] Save and submit the Play-accepted version code 7 bundle as a 100% Alpha closed-test rollout; Publishing overview confirms `1.0.0 (7) — new Milte identity` under **Changes in review**.
 - [x] Rebuild APK/AAB after the Milte AWS endpoint cutover and freeze final sizes, hashes, signature, permission/ABI/alignment checks, secret scan, and source-map inspection.
 - [x] Complete trusted bundletool validation with the SHA-256-verified official Google 1.18.3 release.
 - [x] Install and cold-launch the exact version 7 APK on API 24 and API 36, verify the production sign-in UI, package metadata, and zero crash-buffer entries. The broader authenticated onboarding/location/data/Today traversal remains covered by earlier release evidence and the current automated suites.

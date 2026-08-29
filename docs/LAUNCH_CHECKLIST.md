@@ -42,7 +42,7 @@ Milte is designed to operate without café approvals, venue partnerships, third-
 - [x] Target Alpha closed testing to India, process version code 4, select the 25-address tester list, and send the complete release and app-setup changes to Play review.
 - [x] Process version code 5 in Play, confirm zero supported-device loss, and send the 100% Alpha closed-test sign-in-reliability release to Google review.
 - [x] Process version code 6 in Play, confirm API 24+/target 36 and zero supported-device loss, and send the 100% Alpha closed-test OTP/layout repair release to Google review.
-- [ ] Submit version code 7 from Play's verified **Ready to release** preview. Play has accepted the exact signed AAB, confirmed API 24+/target 36 and zero supported-device loss, and staged the 100% Alpha rollout; the external submission action awaits action-time confirmation.
+- [x] Submit version code 7 from Play's verified **Ready to release** preview. Play accepted the exact signed AAB, confirmed API 24+/target 36 and zero supported-device loss, saved the 100% Alpha rollout, and now shows the release under **Changes in review**.
 - [x] Publish the public support email and complete the IARC content-rating questionnaire and legal acceptance.
 - [ ] If required for the account type, complete the current closed-testing period with the required tester count.
 - [ ] Back up and recovery-test the JKS/password outside this workstation.
