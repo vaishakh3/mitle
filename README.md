@@ -66,15 +66,14 @@ When the hour ends, the live match disappears.
   </tr>
 </table>
 
-```mermaid
-flowchart LR
-  A[Set private boundaries] --> B[One daily introduction]
-  B --> C{Two private yeses?}
-  C -- No --> D[Close quietly]
-  C -- Yes --> E[Reveal public place + one hour]
-  E --> F[Day-of status, safety share, recognition phrase]
-  F --> G[The live match disappears]
-```
+<p align="center">
+  <strong>Private boundaries</strong> &nbsp;→&nbsp;
+  <strong>One introduction</strong> &nbsp;→&nbsp;
+  <strong>Two private yeses</strong> &nbsp;→&nbsp;
+  <strong>One public place</strong> &nbsp;→&nbsp;
+  <strong>One real hour</strong>
+</p>
+<p align="center"><sub>A no closes quietly. A mutual yes reveals the plan. The live match disappears after the meeting.</sub></p>
 
 ### What makes Milte different
 
