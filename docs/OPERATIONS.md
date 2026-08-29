@@ -63,7 +63,7 @@ Production is the `milte-live` CloudFormation stack in `ap-south-1`. Infrastruct
 
 ## Email and notifications
 
-- Cognito default email delivery is capped at 50 messages per AWS account each day and is not acceptable for a multi-person pilot. Production deployments must use a verified SES identity in Mumbai, report `AuthEmailMode=SES`, configure bounce/complaint handling, and run deliverability canaries.
+- The live Cognito pool uses the verified Mumbai SES identity and reports `AuthEmailMode=SES`. Production access is 50,000 messages/day at 14 messages/second; account-level suppression covers bounces and complaints. Recheck `sesv2 get-account`, the Cognito `DEVELOPER` email configuration, and a mailbox-simulator canary after any auth-infrastructure change.
 - Push is optional to account integrity but important to arrival. Create the EAS project, add its public `projectId`, configure Android push credentials, and test match, commitment, reminder, signal, and feedback notifications on a physical device. Invalid Expo tokens are removed automatically after `DeviceNotRegistered` responses.
 
 ## Sensitive-data rules

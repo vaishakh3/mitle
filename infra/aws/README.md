@@ -31,7 +31,7 @@ sam deploy --region ap-south-1 --stack-name milte-live \
     LaunchTimezone=Asia/Kolkata \
     AlertEmail='' \
     AuthEmailIdentityArn='arn:aws:ses:ap-south-1:ACCOUNT_ID:identity/support@example.com' \
-    AuthEmailFrom='Milte <support@example.com>'
+    AuthEmailFrom='support@example.com'
 ```
 
 Creating the stack creates IAM roles. Review the generated change set before production deployment.
@@ -51,5 +51,5 @@ Write the API, region, user-pool ID, and client ID to `apps/mobile/.env`, export
 - Daily matching runs in `Asia/Kolkata`; housekeeping runs every 15 minutes. Both are idempotent under retry.
 - The initial draw scans at most 100 eligible members. Raise this only with a matching-worker redesign.
 - Venue search uses current Amazon Location data and fails closed if it cannot return a named place. Ordinary meetings require no venue partnership or approval.
-- A live stack must report the `AuthEmailMode` output as `SES`. Cognito's default sender is capped at 50 messages per AWS account each day and must not be used for a multi-person pilot.
+- The live stack must report the `AuthEmailMode` output as `SES`. The approved Mumbai SES account currently permits 50,000 messages/day at 14 messages/second and suppresses bounce/complaint destinations automatically.
 - The account’s low Lambda concurrency quota already limits surprise compute spend. Add the owner’s confirmed alert email before inviting testers.

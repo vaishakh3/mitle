@@ -9,7 +9,7 @@ Milte is designed to operate without café approvals, venue partnerships, third-
 - [x] Verify DynamoDB PITR/TTL/SSE, S3 versioning/encryption/public blocks, 30-day logs, schedules, retries, DLQs, alarms, Cognito deletion protection, and API health.
 - [x] Run support persistence/cleanup and housekeeping canaries without retaining test data.
 - [x] Supply `vaishakhsuresh3@gmail.com` as the operations address, confirm the SNS subscription, attach all six alarms, and create the USD 10 monthly budget alerts.
-- [ ] Move Cognito from its controlled-beta default sender to verified SES before public-volume acquisition.
+- [x] Move Cognito from its controlled-beta default sender to verified SES; production access is active in Mumbai at 50,000 messages/day and 14 messages/second.
 - [ ] Configure the Expo project, FCM, and Play service account when those accounts exist; the local signed build remains the independent build path.
 
 ## Trust, safety, and privacy

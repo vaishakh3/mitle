@@ -91,7 +91,7 @@ Milte is machine-ready when every non-human item below is checked, the verificat
 - [x] The owner purchased and identity-verified the Google Play developer account and created the `app.milte` app.
 - [ ] The account completes any current closed-testing requirement before production access.
 - [x] The operations email is confirmed on the SNS topic; all six alarms target it and the USD 10 monthly budget notifications are active.
-- [ ] Complete the SES sender cutover after AWS approves production access. The Mumbai identity is already verified and the support case contains the bounded transactional OTP use case.
+- [x] AWS granted SES production access in Mumbai; the live Cognito pool now uses the verified sender with a 50,000-message daily quota, 14-message/second rate, bounce/complaint suppression, and a successful SES mailbox-simulator canary.
 - [ ] The owner supplies Expo/FCM/Play service-account credentials for physical notification testing and future automated Play submissions.
 - [ ] A physical Android pass covers TalkBack, notifications, location, Maps, calendar, sharing, emergency dialer, and authenticated match/deletion.
 - [ ] The owner backs up and recovery-tests the upload key/password in encrypted storage they control.

@@ -21,7 +21,7 @@ Parameters:
   AuthEmailFrom:
     Type: String
     Default: ''
-    Description: Human-readable From address backed by AuthEmailIdentityArn, for example Milte <support@example.com>.
+    Description: Verified From address backed by AuthEmailIdentityArn, for example support@example.com.
   AllowedWebOrigins:
     Type: CommaDelimitedList
     Default: https://d1w5h7ki7ldbx2.cloudfront.net

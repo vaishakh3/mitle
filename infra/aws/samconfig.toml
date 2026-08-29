@@ -6,5 +6,5 @@ region = "ap-south-1"
 resolve_s3 = true
 confirm_changeset = false
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = "Environment=live LaunchTimezone=Asia/Kolkata AlertEmail=vaishakhsuresh3@gmail.com AllowedWebOrigins=https://d1w5h7ki7ldbx2.cloudfront.net"
+parameter_overrides = "Environment=live LaunchTimezone=Asia/Kolkata AlertEmail=vaishakhsuresh3@gmail.com AllowedWebOrigins=https://d1w5h7ki7ldbx2.cloudfront.net AuthEmailIdentityArn=arn:aws:ses:ap-south-1:172800116877:identity/vaishakhsuresh3@gmail.com AuthEmailFrom=vaishakhsuresh3@gmail.com"
 tags = "Project=Milte Environment=production ManagedBy=SAM"

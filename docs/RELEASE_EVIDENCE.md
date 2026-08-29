@@ -62,12 +62,14 @@ The endpoint-bound version-7 clean build completed 2026-08-29 and produced the s
 - The live synthetic v5 member is `CONFIRMED`; its DynamoDB profile shows `onboarding_complete: true`, current location timestamp, the selected mutual boundaries/days/interests, and matching Terms/Privacy/Community versions. This closes the native UI → Cognito → API → DynamoDB → Today response loop.
 - After evidence capture, the exact synthetic Cognito identity and its `USER#…/PROFILE` record were removed. Follow-up Cognito and DynamoDB queries both returned zero, so the production canary left no member data behind.
 - The version-6 OTP canary was likewise removed from Cognito and DynamoDB immediately after the exact-APK test; follow-up queries returned zero identities and no profile item.
-- The Mumbai SES identity `vaishakhsuresh3@gmail.com` is verified and healthy. AWS case `178747663500418` contains the transactional OTP use case and bounded-volume controls. SES production access is still pending, so the stack deliberately reports `AuthEmailMode=COGNITO_DEFAULT`; switching a sandbox sender would prevent delivery to unverified testers.
+- AWS granted case `178747663500418` for the bounded transactional OTP use case. Mumbai SES now reports `ProductionAccessEnabled=true`, `EnforcementStatus=HEALTHY`, a 50,000-message daily quota, and a 14-message/second maximum send rate. The verified `vaishakhsuresh3@gmail.com` identity is enabled, and account-level suppression covers both bounces and complaints.
+- On 2026-08-29, the live stack updated successfully to `AuthEmailMode=SES`. Cognito reports `EmailSendingAccount=DEVELOPER` with the exact verified SourceArn, the API health endpoint remained healthy, and an SES mailbox-simulator production canary returned message ID `010901a04e3abc1f-22b90785-7311-4e36-9ffd-7c800e855568-000000`.
+- A fresh passwordless Cognito signup canary then returned `DeliveryMedium=EMAIL` through the production pool. Its exact synthetic Cognito user was deleted immediately, and a follow-up filtered query returned zero remaining canary users.
 
 ## Open external/human evidence
 
 - Physical Android verification.
-- AWS approval and cutover of the already verified SES sender, FCM notification delivery, legal review, safety operator, and invite-only safety pilot.
+- FCM notification delivery, legal review, safety operator, and invite-only safety pilot.
 - The personal-account closed-test gate (at least 12 opted-in testers for 14 continuous days) before applying for production access.
 
 ## Google Play evidence

@@ -156,6 +156,7 @@ flowchart TB
 |---|---|
 | App | Expo SDK 57, React Native 0.86, expo-router, React Query, Reanimated |
 | Identity | Amazon Cognito passwordless email OTP |
+| Email | Amazon SES production delivery · 50,000/day · 14/second · bounce/complaint suppression |
 | API | API Gateway + resource-scoped Node.js 22 Lambda |
 | Data | DynamoDB on-demand with conditional transactions, PITR, TTL and SSE |
 | Places | Amazon Location current public-place lookup; no fabricated fallback |
@@ -173,6 +174,7 @@ The release gate is executable, not aspirational:
 - **13** responsive visual states with geometry checks at standard and 320×568 widths.
 - Strict TypeScript, Expo dependency alignment and Expo Doctor **21/21**.
 - SAM lint/build, live AWS health/CORS/security-header checks and support persistence canary.
+- Live Cognito-to-SES passwordless email canary with zero retained synthetic users.
 - Exact signed version-7 APK fresh-installed and cold-launched on Android API 24 and 36.
 - APK/AAB signature, permission, ABI, secret/source-map and 16 KB alignment checks.
 - Google Play accepted version code 7 with zero supported-device loss; the Alpha release is in review.
@@ -251,9 +253,9 @@ supabase/               Archived prototype/reference implementation
 | Production access | External closed-test duration/tester-count gate |
 
 Public rollout also remains gated on legal approval, a named adult safety
-operator, physical-device accessibility/intent testing, the invite-only safety
-pilot, and AWS SES production approval. Those are recorded honestly rather than
-hidden behind a “production ready” badge.
+operator, physical-device accessibility/intent testing, and the invite-only
+safety pilot. Those are recorded honestly rather than hidden behind a
+“production ready” badge.
 
 ---
 
