@@ -1,15 +1,16 @@
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import { Body, Brand, Button, Card, Input, Label, PageScroll, Poetic, Rule, Screen, Small } from '../components/ui';
+import { Body, Brand, Button, Divider, Field, Input, PageScroll, Rule, Screen, Small, Title } from '../components/ui';
 import * as dialog from '../lib/dialog';
 import { authErrorMessage, authErrorRetryAfter, beginEmailAuth, completeEmailAuth, isPlayReviewEmail, resendEmailAuth } from '../lib/auth';
 import { formatRetryDuration, isEmailCodeValid } from '../lib/auth-flow';
 import { colors, fonts, spacing } from '../lib/theme';
 
 export default function SignIn() {
+  const { width } = useWindowDimensions();
+  const wide = width >= 900;
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [stage, setStage] = useState<'email' | 'code'>('email');
@@ -88,103 +89,157 @@ export default function SignIn() {
     <Screen>
       <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1 }}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <PageScroll
-            style={{ flex: 1 }}
-            contentContainerStyle={{
-              flexGrow: 1,
-              paddingTop: spacing.lg,
-              paddingBottom: spacing.lg,
-              gap: spacing.xl,
-            }}
-          >
-          <Animated.View entering={FadeIn.duration(700)}>
-            <Brand />
-            <View style={{ height: spacing.xl }} />
-            <Label style={{ color: colors.accentText }}>One real meeting</Label>
-            <Text style={{ fontFamily: fonts.serifBold, fontSize: 46, lineHeight: 51, color: colors.text, marginTop: spacing.sm }}>
-              One person.{"\n"}<Text style={{ fontFamily: fonts.serifItalic, color: colors.blush }}>One real hour.</Text>
-            </Text>
-            <Poetic style={{ marginTop: spacing.md, maxWidth: 380 }}>
-              Two private yeses reveal one public place. Then the app gets out of your way.
-            </Poetic>
-          </Animated.View>
+          <PageScroll style={{ flex: 1 }} contentContainerStyle={[styles.content, wide && styles.contentWide]}>
+            <View style={styles.topbar}>
+              <Brand />
+              <Small style={styles.category}>A dating app that gets out of the way.</Small>
+            </View>
 
-          <Animated.View entering={FadeInDown.duration(550).delay(150)}>
-            {stage === 'email' ? (
-              <View style={{ gap: spacing.md }}>
-                <Input
-                  accessibilityLabel="Email address"
-                  placeholder="you@somewhere.com"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="email"
-                  keyboardType="email-address"
-                  value={email}
-                  onChangeText={setEmail}
-                  onSubmitEditing={sendCode}
-                  returnKeyType="go"
-                />
-                <Button
-                  title={reviewAccess
-                    ? 'Continue to review access'
-                    : resendAvailableIn > 0
-                      ? `Try again in ${formatRetryDuration(resendAvailableIn)}`
-                      : 'Send my private code'}
-                  onPress={sendCode}
-                  loading={busy}
-                  disabled={!emailValid || resendAvailableIn > 0}
-                />
-                <Small style={{ textAlign: 'center' }}>{reviewAccess ? 'Restricted review access for Google Play.' : 'Passwordless, private, and 18+ only.'}</Small>
-                <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <Button title="Terms" variant="quiet" onPress={() => router.push('/terms')} />
-                  <Button title="Privacy" variant="quiet" onPress={() => router.push('/privacy')} />
-                  <Button title="Support" variant="quiet" onPress={() => router.push('/support')} />
+            <View style={[styles.main, wide && styles.mainWide]}>
+              <View style={[styles.hero, wide && styles.heroWide]}>
+                <View style={[styles.heroLead, wide && styles.heroLeadWide]}>
+                  <View style={styles.heroCopy}>
+                    <Text style={[styles.headline, wide && styles.headlineWide]}>
+                      Meet one person.{"\n"}<Text style={styles.headlineAccent}>That’s the whole point.</Text>
+                    </Text>
+                    <Body style={styles.lede}>
+                      One private introduction. Two honest yeses. One hour together in a public place.
+                    </Body>
+                  </View>
+                  <Image
+                    accessibilityIgnoresInvertColors
+                    accessibilityLabel="Two different café chairs waiting at a table with chai"
+                    source={require('../assets/milte-cafe-table.png')}
+                    resizeMode="contain"
+                    style={[styles.heroArt, wide && styles.heroArtWide]}
+                  />
+                </View>
+                <View style={styles.promiseBand}>
+                  <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.colorBars}>
+                    <View style={[styles.colorBar, { backgroundColor: colors.rose }]} />
+                    <View style={[styles.colorBar, { backgroundColor: colors.marigold }]} />
+                    <View style={[styles.colorBar, { backgroundColor: colors.blue }]} />
+                  </View>
+                  <Small style={styles.promise}>No feed. No popularity contest. No endless chat.</Small>
                 </View>
               </View>
-            ) : (
-              <View style={{ gap: spacing.md }}>
-                <Body>{reviewAccess
-                  ? <>Enter the reusable review password supplied in Google Play Console for <Text style={{ color: colors.text, fontFamily: fonts.sansBold }}>{normalizedEmail}</Text>.</>
-                  : <>Enter the code we sent to <Text style={{ color: colors.text, fontFamily: fonts.sansBold }}>{normalizedEmail}</Text>.</>}
-                </Body>
-                <Input
-                  accessibilityLabel={reviewAccess ? 'Google Play review password' : 'Email sign in code'}
-                  placeholder={reviewAccess ? 'Review password' : 'Enter code'}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete={reviewAccess ? 'off' : 'one-time-code'}
-                  secureTextEntry={reviewAccess}
-                  keyboardType={reviewAccess ? 'default' : 'number-pad'}
-                  maxLength={reviewAccess ? 100 : 8}
-                  value={code}
-                  onChangeText={(value) => setCode(reviewAccess ? value : value.replace(/\D/g, ''))}
-                  onSubmitEditing={verify}
-                  style={{ letterSpacing: reviewAccess ? 0 : 6, textAlign: 'center', fontSize: 22 }}
-                />
-                <Button title="Enter Milte" onPress={verify} loading={busy} disabled={!credentialValid} />
-                <View style={{ gap: spacing.xs }}>
-                  {reviewAccess ? <View /> : <Button
+
+              <View style={[styles.authPanel, wide && styles.authPanelWide]}>
+                {stage === 'email' ? (
+                  <View style={{ gap: spacing.md }}>
+                    <View style={{ gap: spacing.xs }}>
+                      <Title style={styles.authTitle}>Start with your email.</Title>
+                      <Body>Sign in or create an account with your email. No password to remember.</Body>
+                    </View>
+                    <Field label="Email address">
+                      <Input
+                        accessibilityLabel="Email address"
+                        placeholder="you@example.com"
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        autoComplete="email"
+                        keyboardType="email-address"
+                        value={email}
+                        onChangeText={setEmail}
+                        onSubmitEditing={sendCode}
+                        returnKeyType="go"
+                      />
+                    </Field>
+                    <Button
+                      title={reviewAccess
+                        ? 'Continue to review access'
+                        : resendAvailableIn > 0
+                          ? `Try again in ${formatRetryDuration(resendAvailableIn)}`
+                          : 'Continue with email'}
+                      onPress={sendCode}
+                      loading={busy}
+                      disabled={!emailValid || resendAvailableIn > 0}
+                    />
+                    <Small style={{ textAlign: 'center' }}>{reviewAccess ? 'Restricted review access for Google Play.' : 'Private, passwordless, and for adults 18+.'}</Small>
+                  </View>
+                ) : (
+                  <View style={{ gap: spacing.md }}>
+                    <View style={{ gap: spacing.xs }}>
+                      <Title style={styles.authTitle}>{reviewAccess ? 'Enter the review password.' : 'Check your inbox.'}</Title>
+                      <Body>{reviewAccess
+                        ? <>Use the reusable review password supplied in Google Play Console for <Text style={styles.strong}>{normalizedEmail}</Text>.</>
+                        : <>We sent a 6- or 8-digit code to <Text style={styles.strong}>{normalizedEmail}</Text>.</>}
+                      </Body>
+                    </View>
+                    <Input
+                      accessibilityLabel={reviewAccess ? 'Google Play review password' : 'Email verification code'}
+                      placeholder={reviewAccess ? 'Review password' : '6 or 8 digits'}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      autoComplete={reviewAccess ? 'off' : 'one-time-code'}
+                      secureTextEntry={reviewAccess}
+                      keyboardType={reviewAccess ? 'default' : 'number-pad'}
+                      maxLength={reviewAccess ? 100 : 8}
+                      value={code}
+                      onChangeText={(value) => setCode(reviewAccess ? value : value.replace(/\D/g, ''))}
+                      onSubmitEditing={verify}
+                      style={reviewAccess ? undefined : styles.codeInput}
+                    />
+                    <Button title="Enter Milte" onPress={verify} loading={busy} disabled={!credentialValid} />
+                    {!reviewAccess && <Button
                       title={resendAvailableIn > 0 ? `Resend in ${formatRetryDuration(resendAvailableIn)}` : 'Resend code'}
-                      variant="quiet"
+                      variant="ghost"
                       onPress={resendCode}
                       disabled={busy || resendAvailableIn > 0}
                     />}
-                  <Button title="Use another email" variant="quiet" onPress={() => { setStage('email'); setCode(''); setResendAvailableIn(0); }} />
-                </View>
+                    <Button title="Use another email" variant="quiet" onPress={() => { setStage('email'); setCode(''); setResendAvailableIn(0); }} />
+                  </View>
+                )}
               </View>
-            )}
-          </Animated.View>
+            </View>
 
-          <Animated.View entering={FadeInDown.duration(550).delay(260)}>
-            <Card tone="outlined" style={{ gap: spacing.md, paddingVertical: spacing.md }}>
-              <Rule mark="01" title="No performance" body="No photos, bios, likes, or follower counts." />
-              <Rule mark="02" title="Two real yeses" body="The place is revealed only after you both commit." />
-              <Rule mark="03" title="Offline by design" body="When the hour ends, the match disappears." />
-            </Card>
-          </Animated.View>
+            <Divider />
+            <View style={styles.principles}>
+              <Rule mark="—" title="Private by design" body="No public photos, bios, likes, or follower counts." />
+              <Rule mark="—" title="Mutual or nothing" body="The place appears only after you both choose the date." />
+              <Rule mark="—" title="Built to end" body="When the hour ends, the live match disappears." />
+            </View>
+
+            <View style={styles.legalLinks}>
+              <Button title="Terms" variant="quiet" onPress={() => router.push('/terms')} />
+              <Button title="Privacy" variant="quiet" onPress={() => router.push('/privacy')} />
+              <Button title="Safety" variant="quiet" onPress={() => router.push('/safety')} />
+              <Button title="Support" variant="quiet" onPress={() => router.push('/support')} />
+            </View>
           </PageScroll>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  content: { flexGrow: 1, gap: spacing.xl, paddingBottom: spacing.xl, paddingTop: spacing.md },
+  contentWide: { maxWidth: 1040 },
+  topbar: { alignItems: 'center', borderBottomColor: colors.borderSoft, borderBottomWidth: 1, flexDirection: 'row', justifyContent: 'space-between', paddingBottom: spacing.md },
+  category: { color: colors.textDim, maxWidth: 180, textAlign: 'right' },
+  hero: { alignItems: 'stretch', gap: spacing.md },
+  heroWide: { flex: 1, justifyContent: 'center', paddingVertical: spacing.lg },
+  heroLead: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
+  heroLeadWide: { gap: spacing.md },
+  heroCopy: { flex: 1, gap: spacing.md },
+  headline: { color: colors.text, fontFamily: fonts.serifBold, fontSize: 31, lineHeight: 33, letterSpacing: -1.25 },
+  headlineWide: { fontSize: 39, lineHeight: 41, letterSpacing: -1.7 },
+  headlineAccent: { color: colors.blue, fontFamily: fonts.serifBold },
+  lede: { fontSize: 15, lineHeight: 22, maxWidth: 470 },
+  heroArt: { height: 142, width: 126 },
+  heroArtWide: { height: 220, width: 196 },
+  promiseBand: { alignItems: 'center', backgroundColor: colors.text, borderRadius: 6, flexDirection: 'row', gap: spacing.md, paddingHorizontal: spacing.md, paddingVertical: 12 },
+  colorBars: { alignItems: 'stretch', flexDirection: 'row', height: 25, overflow: 'hidden', width: 12 },
+  colorBar: { flex: 1 },
+  promise: { color: colors.onAccent, flex: 1, fontFamily: fonts.sansBold },
+  authPanel: { borderTopColor: colors.text, borderTopWidth: 2, paddingTop: spacing.lg },
+  authPanelWide: { borderLeftColor: colors.border, borderLeftWidth: 1, borderTopWidth: 0, flex: 1, paddingLeft: spacing.xl, paddingTop: 0 },
+  authTitle: { fontSize: 24, lineHeight: 29 },
+  main: { gap: spacing.xl },
+  mainWide: { alignItems: 'center', flexDirection: 'row', gap: spacing.xxl },
+  strong: { color: colors.text, fontFamily: fonts.sansBold },
+  codeInput: { fontSize: 22, letterSpacing: 6, textAlign: 'center' },
+  principles: { gap: spacing.lg },
+  legalLinks: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' },
+});

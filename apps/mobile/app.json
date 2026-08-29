@@ -6,14 +6,14 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.milte"
     },
     "android": {
       "package": "app.milte",
-      "versionCode": 6,
+      "versionCode": 7,
       "allowBackup": false,
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
@@ -27,7 +27,7 @@
         "android.permission.SYSTEM_ALERT_WINDOW"
       ],
       "adaptiveIcon": {
-        "backgroundColor": "#0B0A0D",
+        "backgroundColor": "#2347D8",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -65,12 +65,12 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0B0A0D",
+          "backgroundColor": "#F6F7F8",
           "image": "./assets/splash-icon.png",
-          "imageWidth": 180,
+          "imageWidth": 220,
           "resizeMode": "contain",
           "dark": {
-            "backgroundColor": "#0B0A0D",
+            "backgroundColor": "#F6F7F8",
             "image": "./assets/splash-icon.png"
           }
         }

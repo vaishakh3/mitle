@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   ScrollView,
   ScrollViewProps,
@@ -14,17 +13,13 @@ import {
   View,
   ViewProps,
 } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { colors, fonts, radii, spacing, type } from '../lib/theme';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /* ---------------------------------- layout --------------------------------- */
 
 export function Screen({ children, style, ...rest }: ViewProps) {
   return (
     <View style={[styles.screen, style]} {...rest}>
-      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.edgeRail} />
       {children}
     </View>
   );
@@ -38,16 +33,17 @@ export function Page({ children, style, ...rest }: ViewProps) {
   );
 }
 
-export function PageScroll({ contentContainerStyle, ...rest }: ScrollViewProps) {
+export const PageScroll = React.forwardRef<ScrollView, ScrollViewProps>(function PageScroll({ contentContainerStyle, ...rest }, ref) {
   return (
     <ScrollView
+      ref={ref}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={[styles.pageScroll, contentContainerStyle]}
       {...rest}
     />
   );
-}
+});
 
 interface CardProps extends ViewProps {
   tone?: 'default' | 'warm' | 'paper' | 'outlined';
@@ -100,7 +96,7 @@ export const Small = makeText(type.small, colors.muted);
 export function Label({ style, children, ...rest }: TextProps) {
   return (
     <Text
-      style={[type.label, { color: colors.muted, textTransform: 'uppercase' }, style]}
+      style={[type.label, { color: colors.muted }, style]}
       {...rest}
     >
       {children}
@@ -110,16 +106,15 @@ export function Label({ style, children, ...rest }: TextProps) {
 
 export function Brand({ compact = false }: { compact?: boolean }) {
   return (
-    <View accessible accessibilityRole="text" accessibilityLabel="Milte. Meet for real." style={styles.brandLockup}>
-      <Image
-        accessibilityIgnoresInvertColors
-        source={require('../assets/milte-symbol-reversed.png')}
-        style={[styles.brandSymbol, compact && styles.brandSymbolCompact]}
-      />
-      <View style={{ gap: compact ? 0 : 1 }}>
-        <Text style={[styles.brandWord, compact && styles.brandWordCompact]}>milte</Text>
-        {!compact && <Text style={styles.brandLine}>meet for real<Text style={{ color: colors.accentText }}>.</Text></Text>}
-      </View>
+    <View accessible accessibilityRole="text" accessibilityLabel="Milte? Meet for real." style={styles.brandLockup}>
+      <Text allowFontScaling={false} style={[styles.brandWord, compact && styles.brandWordCompact]}>
+        milte<Text style={styles.brandQuestion}>?</Text>
+      </Text>
+      {!compact && (
+        <Text allowFontScaling={false} style={styles.brandLine}>
+          meet for real<Text style={styles.brandFullStop}>.</Text>
+        </Text>
+      )}
     </View>
   );
 }
@@ -143,22 +138,18 @@ export function Button({
   loading,
   accessibilityHint,
 }: ButtonProps) {
-  const scale = useSharedValue(1);
-  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   const busy = disabled || loading;
   const isPrimary = variant === 'primary';
 
   return (
-    <AnimatedPressable
+    <Pressable
       accessibilityRole="button"
       accessibilityLabel={title}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: !!busy, busy: !!loading }}
       onPress={onPress}
       disabled={busy}
-      onPressIn={() => (scale.value = withSpring(0.975, { damping: 20, stiffness: 400 }))}
-      onPressOut={() => (scale.value = withSpring(1, { damping: 20, stiffness: 400 }))}
-      style={[
+      style={({ pressed }) => [
         styles.button,
         isPrimary && styles.buttonPrimary,
         variant === 'secondary' && styles.buttonSecondary,
@@ -166,26 +157,27 @@ export function Button({
         variant === 'quiet' && styles.buttonQuiet,
         variant === 'danger' && styles.buttonDanger,
         busy && styles.disabled,
-        animStyle,
+        pressed && !busy && styles.pressed,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={isPrimary ? colors.paper : colors.text} />
+        <ActivityIndicator color={isPrimary ? colors.onAccent : colors.text} />
       ) : (
         <Text
           style={[
             styles.buttonText,
-            isPrimary && { color: colors.paper },
-            variant === 'secondary' && { color: colors.paper },
+            isPrimary && { color: colors.onAccent },
+            variant === 'secondary' && { color: colors.text },
             variant === 'ghost' && { color: colors.text },
             variant === 'quiet' && { color: colors.muted, fontFamily: fonts.sansMedium },
             variant === 'danger' && { color: colors.danger },
+            busy && styles.disabledText,
           ]}
         >
           {title}
         </Text>
       )}
-    </AnimatedPressable>
+    </Pressable>
   );
 }
 
@@ -247,21 +239,15 @@ interface ChipProps {
 }
 
 export function Chip({ label, selected, onPress, compact = false }: ChipProps) {
-  const scale = useSharedValue(1);
-  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
-    <AnimatedPressable
+    <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      onPress={() => {
-        scale.value = withSpring(0.94, { damping: 15, stiffness: 500 });
-        scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-        onPress();
-      }}
-      style={[styles.chip, compact && styles.chipCompact, selected && styles.chipSelected, animStyle]}
+      onPress={onPress}
+      style={({ pressed }) => [styles.chip, compact && styles.chipCompact, selected && styles.chipSelected, pressed && styles.pressed]}
     >
       <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
-    </AnimatedPressable>
+    </Pressable>
   );
 }
 
@@ -289,8 +275,8 @@ export function ChoiceCard({
     >
       <View style={[styles.radio, selected && styles.radioSelected]}>{selected && <View style={styles.radioCore} />}</View>
       <View style={{ flex: 1, gap: 3 }}>
-        <Body style={{ color: colors.text, fontFamily: fonts.sansBold }}>{title}</Body>
-        <Small>{body}</Small>
+        <Body style={{ color: selected ? colors.onAccent : colors.text, fontFamily: fonts.sansBold }}>{title}</Body>
+        <Small style={selected ? { color: '#E7E9EB' } : undefined}>{body}</Small>
       </View>
     </Pressable>
   );
@@ -332,6 +318,7 @@ export function ProgressDots({ total, current }: { total: number; current: numbe
             styles.dot,
             i === current && styles.dotCurrent,
             i < current && styles.dotDone,
+            i < current && { backgroundColor: [colors.rose, colors.marigold, colors.blue][i % 3] },
           ]}
         />
       ))}
@@ -371,56 +358,49 @@ export function Rule({ mark, title, body }: { mark: string; title: string; body:
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg, overflow: 'hidden' },
-  edgeRail: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, backgroundColor: colors.rose },
-  page: { width: '100%', maxWidth: 560, alignSelf: 'center', paddingHorizontal: spacing.lg, boxSizing: 'border-box' },
+  page: { width: '100%', maxWidth: 600, alignSelf: 'center', paddingHorizontal: spacing.lg, boxSizing: 'border-box' },
   pageScroll: {
     width: '100%',
-    maxWidth: 560,
+    maxWidth: 600,
     alignSelf: 'center',
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xxxl,
     boxSizing: 'border-box',
   },
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.borderSoft,
-    borderWidth: 1,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-  },
-  cardWarm: { backgroundColor: colors.surfaceWarm, borderColor: colors.roseDeep },
-  cardPaper: { backgroundColor: colors.paper, borderColor: colors.paperShade },
-  cardOutlined: { backgroundColor: 'transparent', borderColor: colors.border },
+  card: { backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.lg },
+  cardWarm: { backgroundColor: colors.surfaceWarm },
+  cardPaper: { backgroundColor: colors.paper, borderColor: colors.paperShade, borderWidth: 1 },
+  cardOutlined: { backgroundColor: 'transparent', borderColor: colors.border, borderWidth: 1 },
   divider: { height: 1, backgroundColor: colors.borderSoft, marginVertical: spacing.md },
   hairline: { height: 1, backgroundColor: colors.borderSoft },
   button: {
     borderRadius: radii.sm,
-    paddingVertical: 15,
+    paddingVertical: 14,
     paddingHorizontal: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 54,
   },
-  brandLockup: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  brandSymbol: { width: 42, height: 42 },
-  brandSymbolCompact: { width: 30, height: 30 },
-  brandWord: { color: colors.text, fontFamily: fonts.sansBold, fontSize: 27, lineHeight: 29, letterSpacing: -1.3 },
-  brandWordCompact: { fontSize: 21, lineHeight: 23, letterSpacing: -1 },
-  brandLine: { color: colors.textDim, fontFamily: fonts.sansMedium, fontSize: 11, lineHeight: 13, letterSpacing: -0.1 },
-  buttonPrimary: {
-    backgroundColor: colors.rose,
-  },
-  buttonSecondary: { backgroundColor: colors.surfaceRaised, borderWidth: 1, borderColor: colors.border },
+  brandLockup: { alignItems: 'flex-start' },
+  brandWord: { color: colors.text, fontFamily: fonts.serifBold, fontSize: 29, lineHeight: 31, letterSpacing: -1.5 },
+  brandWordCompact: { fontSize: 23, lineHeight: 25, letterSpacing: -1.15 },
+  brandQuestion: { color: colors.rose, fontFamily: fonts.serifBold },
+  brandLine: { color: colors.textDim, fontFamily: fonts.sansMedium, fontSize: 11, lineHeight: 14, letterSpacing: 0.05 },
+  brandFullStop: { color: colors.marigold, fontFamily: fonts.sansBold },
+  buttonPrimary: { backgroundColor: colors.blue },
+  buttonSecondary: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.text },
   buttonGhost: { borderWidth: 1, borderColor: colors.border, backgroundColor: 'transparent' },
   buttonQuiet: { minHeight: 48, paddingVertical: 9 },
-  buttonDanger: { borderWidth: 1, borderColor: 'rgba(232,93,93,0.42)', backgroundColor: 'rgba(232,93,93,0.06)' },
+  buttonDanger: { borderWidth: 1, borderColor: '#D98C83', backgroundColor: colors.surface },
   buttonText: { fontSize: 15, fontFamily: fonts.sansBold, letterSpacing: 0.25 },
-  disabled: { opacity: 0.42 },
+  disabled: { backgroundColor: colors.bgDeep, borderColor: colors.borderSoft, opacity: 1 },
+  disabledText: { color: colors.muted },
+  pressed: { opacity: 0.72 },
   textButton: { minHeight: 48, paddingVertical: 5, justifyContent: 'center' },
   textButtonLabel: { color: colors.muted, fontFamily: fonts.sansBold, fontSize: 12, letterSpacing: 1.4, textTransform: 'uppercase' },
   input: {
     minWidth: 0,
-    backgroundColor: 'rgba(26,23,32,0.92)',
+    backgroundColor: colors.surface,
     borderColor: colors.border,
     borderWidth: 1,
     borderRadius: radii.sm,
@@ -430,21 +410,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 15,
   },
-  inputFocused: { borderColor: colors.rose, backgroundColor: colors.surface },
+  inputFocused: { borderColor: colors.rose, borderWidth: 2, backgroundColor: colors.surfaceRaised },
   chip: {
     borderRadius: radii.sm,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.surface,
     paddingHorizontal: 16,
     paddingVertical: 10,
     minHeight: 48,
     justifyContent: 'center',
   },
   chipCompact: { paddingHorizontal: 13, paddingVertical: 8 },
-  chipSelected: { backgroundColor: colors.paper, borderColor: colors.paper },
+  chipSelected: { backgroundColor: colors.blue, borderColor: colors.blue },
   chipText: { color: colors.textDim, fontSize: 14, fontFamily: fonts.sansMedium },
-  chipTextSelected: { color: colors.ink, fontFamily: fonts.sansBold },
+  chipTextSelected: { color: colors.onAccent, fontFamily: fonts.sansBold },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   choiceCard: {
     flexDirection: 'row',
@@ -456,31 +436,31 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSoft,
     backgroundColor: colors.surface,
   },
-  choiceCardSelected: { borderColor: colors.rose, backgroundColor: colors.surfaceWarm },
+  choiceCardSelected: { borderColor: colors.blue, backgroundColor: colors.blue },
   radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: colors.muted, alignItems: 'center', justifyContent: 'center' },
-  radioSelected: { borderColor: colors.rose },
-  radioCore: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.rose },
+  radioSelected: { borderColor: colors.onAccent },
+  radioCore: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.onAccent },
   checkRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: spacing.sm, minHeight: 48 },
   checkbox: { width: 22, height: 22, borderRadius: 3, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
-  checkboxChecked: { backgroundColor: colors.rose, borderColor: colors.rose },
-  checkmark: { color: colors.paper, fontFamily: fonts.sansBold, fontSize: 14 },
+  checkboxChecked: { backgroundColor: colors.blue, borderColor: colors.blue },
+  checkmark: { color: colors.onAccent, fontFamily: fonts.sansBold, fontSize: 14 },
   dotsRow: { flexDirection: 'row', gap: 6, alignItems: 'center' },
   dot: { flex: 1, height: 3, borderRadius: 2, backgroundColor: colors.border },
-  dotCurrent: { backgroundColor: colors.rose },
-  dotDone: { backgroundColor: colors.blush },
+  dotCurrent: { backgroundColor: colors.text },
+  dotDone: { backgroundColor: colors.blue },
   statusPill: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 7, borderWidth: 1, borderRadius: radii.pill, paddingHorizontal: 11, paddingVertical: 7 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusText: { fontFamily: fonts.sansBold, fontSize: 11, letterSpacing: 1.1, textTransform: 'uppercase' },
   rule: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' },
-  ruleMark: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surfaceRaised, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  ruleMark: { width: 28, minHeight: 24, alignItems: 'flex-start', justifyContent: 'flex-start', paddingTop: 2 },
   ruleMarkText: {
-    color: colors.blush,
+    color: colors.rose,
     fontFamily: fonts.sansBold,
     fontSize: 12,
     lineHeight: 16,
     letterSpacing: 0.6,
     width: 28,
-    textAlign: 'center',
+    textAlign: 'left',
     includeFontPadding: false,
   },
 });

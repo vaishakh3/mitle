@@ -2,8 +2,8 @@ import { router } from 'expo-router';
 import React from 'react';
 import { View } from 'react-native';
 import { AppHeader } from '../components/AppHeader';
-import { Body, Button, Card, Label, PageScroll, Rule, Screen, Title } from '../components/ui';
-import { colors, spacing } from '../lib/theme';
+import { Body, Button, Card, PageScroll, Rule, Screen, Title } from '../components/ui';
+import { spacing } from '../lib/theme';
 
 export default function DeleteAccountInfo() {
   return (
@@ -11,7 +11,6 @@ export default function DeleteAccountInfo() {
       <AppHeader back title="Delete account" />
       <PageScroll style={{ flex: 1 }} contentContainerStyle={{ paddingTop: spacing.sm, gap: spacing.lg }}>
         <View style={{ gap: spacing.sm }}>
-          <Label style={{ color: colors.accentText }}>You stay in control</Label>
           <Title>Delete Milte from inside the app.</Title>
           <Body>Sign in with your email, open Your corner, then choose Delete account. Two confirmations prevent accidental deletion.</Body>
         </View>

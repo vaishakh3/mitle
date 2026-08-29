@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Linking, Platform, RefreshControl, Share, View } from 'react-native';
+import { Image, Linking, Platform, RefreshControl, Share, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { AppHeader } from '../components/AppHeader';
 import { ConversationSpark } from '../components/ConversationSpark';
@@ -18,10 +18,11 @@ import { Ticket } from '../components/Ticket';
 import { Body, Button, Card, Label, PageScroll, Poetic, Rule, Screen, Small, StatusPill, Subtitle, Title } from '../components/ui';
 import { getCurrentMatch, getMyPreferences, getMyProfile, getPendingFeedback, getSecondChapterResult, respondToMatch } from '../lib/api';
 import { addToCalendar } from '../lib/calendar';
+import { DEFAULT_AVATAR_ID } from '../lib/avatars';
 import * as dialog from '../lib/dialog';
 import { refreshLocation } from '../lib/location';
 import { registerPushToken } from '../lib/push';
-import { colors, spacing } from '../lib/theme';
+import { colors, radii, spacing } from '../lib/theme';
 import type { CurrentMatch } from '../lib/types';
 
 const POLL_MS = 15_000;
@@ -166,39 +167,51 @@ export default function Today() {
       <Animated.View entering={FadeIn.duration(500)} style={{ gap: spacing.lg }}>
         {secondChapter && <SecondChapterCard result={secondChapter} />}
         {pendingFeedback && <MeetFeedbackCard feedback={pendingFeedback} />}
-        <View style={{ alignItems: 'center', paddingVertical: spacing.md }}>
-          <MiltePulse size={pendingFeedback ? 66 : 94} />
-          <View style={{ height: spacing.md }} />
+        <View style={{ alignItems: 'flex-start', gap: spacing.md, paddingVertical: spacing.md }}>
           <StatusPill
             label={paused ? 'Matching paused' : located === null ? 'Checking location' : located === false ? 'Location needed' : availableTomorrow ? 'Ready for tomorrow' : 'Tomorrow is off'}
             tone={paused ? 'neutral' : located === true && availableTomorrow ? 'sage' : 'amber'}
           />
-          <Title style={{ textAlign: 'center', marginTop: spacing.md }}>
-            {justEnded ? 'The rest is offline.' : paused ? 'Taking a little room.' : located === false ? 'A place before a possibility.' : 'Nothing to perform here.'}
+          <Title>
+            {justEnded ? 'The rest is yours.' : paused ? 'Taking a little room.' : located === false ? 'Let’s find your part of the city.' : availableTomorrow ? 'Tomorrow is quietly taking shape.' : 'Tomorrow stays entirely yours.'}
           </Title>
-          <Poetic style={{ textAlign: 'center', marginTop: spacing.sm, maxWidth: 340 }}>
+          <Body style={{ maxWidth: 460 }}>
             {justEnded
               ? 'Your match has faded from the app. If you found each other, the story belongs to you now.'
               : paused
-                ? 'You will stay out of the daily draw until you decide to return.'
+                ? 'You are out of the daily draw until you decide to return. There is nothing to catch up on.'
                 : located === null
                   ? 'Milte is checking whether your private location is fresh enough for tomorrow’s draw.'
                   : located === false
-                    ? 'Add your location when you are ready. Until then, your account stays safely outside the draw.'
+                    ? 'Add an approximate location when you are ready. It helps Milte choose someone nearby and a public place between you.'
                 : availableTomorrow
-                  ? 'If someone nearby fits both sets of boundaries, one possibility will arrive. Until then, close the app.'
+                  ? 'Milte checks once a day. If someone nearby fits both sets of boundaries, one private invitation appears here. No need to keep checking.'
                   : 'You marked tomorrow unavailable, so we will leave it entirely yours.'}
-          </Poetic>
+          </Body>
+          {!paused && located !== false && availableTomorrow && (
+            <Image
+              accessibilityIgnoresInvertColors
+              accessibilityLabel="Two paths through the city meeting at one café table"
+              source={require('../assets/milte-crossed-paths.png')}
+              resizeMode="contain"
+              style={{ alignSelf: 'stretch', height: 185, marginVertical: spacing.xs, width: '100%' }}
+            />
+          )}
+          <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ alignItems: 'center', flexDirection: 'row', height: 16, width: 152 }}>
+            <View style={{ backgroundColor: colors.text, height: 1, width: '100%' }} />
+            <View style={{ backgroundColor: colors.rose, borderRadius: 5, height: 10, left: '50%', marginLeft: -5, position: 'absolute', width: 10 }} />
+          </View>
+          <Small>No queue to clear and nothing to keep checking.</Small>
         </View>
         {(paused || !availableTomorrow) && <Button title="Change my availability" variant="ghost" onPress={() => router.push('/settings')} />}
         <HowItWorks />
-        <Card tone="outlined" style={{ gap: spacing.md }}>
-          <Label>What the algorithm can see</Label>
+        <View style={{ gap: spacing.lg, marginTop: spacing.sm }}>
+          <Label>What Milte considers</Label>
           <Rule mark="→" title="Mutual boundaries" body="Gender, age range, distance, and a day both people can make." />
           <Rule mark="→" title="Private alignment" body="Intent, social energy, date style, budget, and interests nudge the pairing." />
           <Rule mark="?" title="Still a surprise" body="Chance remains part of every match. Compatibility is not destiny." />
           <Rule mark="×" title="Never a popularity score" body="No likes, photos, engagement, or desirability ranking." />
-        </Card>
+        </View>
       </Animated.View>
     );
   } else if (match.status === 'pending' && !match.you_accepted && (openStateReadyFor !== match.match_id || openedFor !== match.match_id)) {
@@ -216,19 +229,36 @@ export default function Today() {
   } else if (match.status === 'pending' && !match.you_accepted) {
     scene = (
       <Animated.View entering={FadeInUp.duration(430)} style={{ gap: spacing.lg }}>
-        <Card tone="warm" style={{ borderColor: colors.rose, gap: spacing.lg, paddingVertical: spacing.xl }}>
-          <View style={{ alignItems: 'center', gap: spacing.sm }}>
-            <Label style={{ color: colors.accentText }}>One mutual possibility</Label>
-            <Title style={{ textAlign: 'center' }}>Someone fits the shape of your yes.</Title>
-            <Poetic style={{ textAlign: 'center', maxWidth: 310 }}>You won’t learn their name or see their face. If both of you choose this, Milte will select tomorrow’s public place and hour.</Poetic>
+        <View style={{ alignItems: 'flex-start', gap: spacing.md }}>
+          <StatusPill label="One private invitation" tone="rose" />
+          <Title style={{ maxWidth: 430 }}>
+            Someone fits the{`\n`}<Text style={{ color: colors.blue }}>shape of your yes.</Text>
+          </Title>
+          <Poetic style={{ maxWidth: 440 }}>You won’t learn their name or see their face. If you both choose this, Milte will select tomorrow’s public place and hour.</Poetic>
+        </View>
+
+        <View style={{ backgroundColor: colors.paper, borderColor: colors.paperShade, borderRadius: radii.lg, borderWidth: 1, overflow: 'hidden' }}>
+          <Image
+            accessibilityIgnoresInvertColors
+            accessibilityLabel="Two different café chairs waiting at a table with chai"
+            source={require('../assets/milte-cafe-table.png')}
+            resizeMode="contain"
+            style={{ alignSelf: 'stretch', height: 154, marginVertical: spacing.sm, width: '100%' }}
+          />
+          <View style={{ backgroundColor: colors.text, paddingHorizontal: spacing.lg, paddingVertical: spacing.lg }}>
+            <Countdown until={match.accept_deadline} label="left to decide" tone="inverse" size={42} onDone={refresh} />
           </View>
-          <Countdown until={match.accept_deadline} label="to decide" onDone={refresh} />
-          <View style={{ gap: spacing.sm }}>
-            <Button title="I’m open to meeting" onPress={() => respond.mutate({ action: 'accept' })} loading={respond.isPending} />
-            <Button title="Not today" variant="quiet" onPress={confirmDecline} />
-          </View>
-        </Card>
-        <Card tone="outlined"><Small style={{ textAlign: 'center' }}>Saying no is private. The other person is simply told the match did not happen.</Small></Card>
+        </View>
+
+        <View style={{ gap: spacing.sm }}>
+          <Button title="I’m open to meeting" onPress={() => respond.mutate({ action: 'accept' })} loading={respond.isPending} />
+          <Button title="Not today" variant="quiet" onPress={confirmDecline} />
+        </View>
+
+        <View style={{ alignItems: 'flex-start', borderTopColor: colors.borderSoft, borderTopWidth: 1, flexDirection: 'row', gap: spacing.sm, paddingTop: spacing.md }}>
+          <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ backgroundColor: colors.rose, height: 7, marginTop: 6, width: 7 }} />
+          <Small style={{ flex: 1 }}>Saying no is private. The other person is simply told the match did not happen.</Small>
+        </View>
       </Animated.View>
     );
   } else if (match.status === 'pending' && match.you_accepted) {
@@ -271,7 +301,11 @@ export default function Today() {
       <Animated.View entering={FadeInDown.duration(520)} style={{ gap: spacing.lg }}>
         <View style={{ alignItems: 'center', gap: spacing.sm }}>
           <StatusPill label={live ? 'The window is open' : 'Both said yes'} tone={live ? 'amber' : 'sage'} />
-          <Title style={{ textAlign: 'center' }}>{live ? 'Phone down. Eyes up.' : 'Tomorrow has a place now.'}</Title>
+          {live ? (
+            <Title style={{ textAlign: 'center' }}>Phone down. Eyes up.</Title>
+          ) : (
+            <Title style={{ textAlign: 'center' }}>Tomorrow has a <Text style={{ color: colors.blue }}>place now.</Text></Title>
+          )}
           <Poetic style={{ textAlign: 'center' }}>{live ? 'Go find your stranger.' : 'No planning spiral. Just show up as yourself.'}</Poetic>
         </View>
 
@@ -289,11 +323,11 @@ export default function Today() {
             <Poetic style={{ color: colors.text, fontSize: 22, lineHeight: 31, marginTop: spacing.sm }}>“{match.their_spot_hint || 'Their clue is unavailable. Use the recognition phrase, and leave if you cannot identify each other safely.'}”</Poetic>
           </View>
           {!!match.meeting_phrase && (
-            <Card tone="warm" style={{ padding: spacing.md }}>
+            <View style={{ borderTopColor: colors.borderSoft, borderTopWidth: 1, marginTop: spacing.sm, paddingTop: spacing.md }}>
               <Label style={{ color: colors.blush }}>Recognition phrase</Label>
               <Subtitle style={{ marginTop: spacing.xs, color: colors.blush }}>{match.meeting_phrase}</Subtitle>
               <Small style={{ marginTop: spacing.xs }}>Ask for this phrase before you settle in. Only this match can see it.</Small>
-            </Card>
+            </View>
           )}
         </Card>
 
@@ -318,9 +352,9 @@ export default function Today() {
 
   return (
     <Screen>
-      <AppHeader title="Today" actionLabel="Settings" onAction={() => router.push('/settings')} />
+      <AppHeader title="Today" actionLabel="Your corner" avatarId={profileQuery.data?.avatar_id ?? DEFAULT_AVATAR_ID} onAction={() => router.push('/settings')} />
       {located === false && (
-        <View style={{ paddingHorizontal: spacing.lg, width: '100%', maxWidth: 560, alignSelf: 'center' }}>
+        <View style={{ paddingHorizontal: spacing.lg, width: '100%', maxWidth: 600, alignSelf: 'center' }}>
           <Card tone="warm" style={{ padding: spacing.md, gap: spacing.sm }}>
             <Label style={{ color: colors.amber }}>Matching paused by location</Label>
             <Small>Milte can’t place you in the daily draw until location is available.</Small>

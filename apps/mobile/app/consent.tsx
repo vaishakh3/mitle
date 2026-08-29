@@ -2,11 +2,11 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { AppHeader } from '../components/AppHeader';
-import { Body, Button, Card, CheckRow, Label, PageScroll, Screen, Title } from '../components/ui';
+import { Body, Button, Card, CheckRow, PageScroll, Screen, Small, Title } from '../components/ui';
 import { upsertProfile } from '../lib/api';
 import * as dialog from '../lib/dialog';
 import { LEGAL_VERSION } from '../lib/legal';
-import { colors, spacing } from '../lib/theme';
+import { spacing } from '../lib/theme';
 
 export default function Consent() {
   const [terms, setTerms] = useState(false);
@@ -41,9 +41,9 @@ export default function Consent() {
     <Screen>
       <AppHeader title="Updated promise" />
       <PageScroll style={{ flex: 1 }} contentContainerStyle={{ gap: spacing.md }}>
-        <Label style={{ color: colors.accentText }}>A clearer promise · {LEGAL_VERSION}</Label>
         <Title>A few things changed.</Title>
         <Body>Review the current terms, privacy notice, safety promise, and community boundaries before returning to the daily draw.</Body>
+        <Small>Policy version {LEGAL_VERSION}</Small>
         <Card style={{ gap: spacing.sm }}>
           <CheckRow checked={terms} onPress={() => setTerms((value) => !value)}>I accept the current Terms of Use.</CheckRow>
           <Button title="Read Terms" variant="quiet" onPress={() => router.push('/terms')} />

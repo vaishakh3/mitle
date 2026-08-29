@@ -41,7 +41,6 @@ export default function Safety() {
       <AppHeader back title="Safety" />
       <PageScroll style={{ flex: 1 }} contentContainerStyle={{ paddingTop: spacing.sm, gap: spacing.lg }}>
         <View style={{ gap: spacing.sm }}>
-          <Label style={{ color: colors.accentText }}>You never owe a stranger your comfort</Label>
           <Title>A good maybe has an easy exit.</Title>
           <Body>Milte reduces unnecessary exposure, but no app can guarantee another person’s behaviour. Your judgment comes first—before the concept, the venue, or their feelings.</Body>
         </View>

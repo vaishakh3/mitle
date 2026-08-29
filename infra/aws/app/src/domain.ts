@@ -2,6 +2,7 @@ export type Gender = 'man' | 'woman' | 'nonbinary';
 export type RelationshipIntent = 'long_term' | 'open' | 'figuring_out';
 export type SocialEnergy = 'quiet' | 'balanced' | 'lively';
 export type DateStyle = 'coffee' | 'activity' | 'sober' | 'anything';
+export type AvatarId = '01' | '02' | '03' | '04' | '05' | '06' | '07' | '08';
 export type MatchStatus = 'pending' | 'accepted_a' | 'accepted_b' | 'committed';
 export type MeetSignal = 'heading_there' | 'arrived' | 'running_late' | 'cant_make_it';
 export type MeetOutcome = 'met' | 'no_show' | 'didnt_go';
@@ -28,9 +29,11 @@ export interface UserItem {
   SK: 'PROFILE';
   entityType: 'USER';
   userId: string;
+  username: string;
   display_name: string;
   birthdate: string | null;
   gender: Gender | null;
+  avatar_id: AvatarId;
   spot_hint: string;
   lat: number | null;
   lng: number | null;
@@ -147,6 +150,23 @@ export const INTERESTS = [
   { id: 20, slug: 'comedy', label: 'Comedy', emoji: '😂' },
 ] as const;
 
+const USERNAME_ADJECTIVES = [
+  'amber', 'breezy', 'bright', 'calm', 'clever', 'coastal', 'curious', 'gentle',
+  'golden', 'kind', 'lively', 'lucid', 'mellow', 'monsoon', 'quiet', 'radiant',
+  'silver', 'sunny', 'vivid', 'warm', 'wandering',
+] as const;
+const USERNAME_NOUNS = [
+  'comet', 'echo', 'fern', 'heron', 'kite', 'lantern', 'lotus', 'myna', 'neem',
+  'river', 'sparrow', 'trail', 'wave', 'willow', 'zephyr', 'cove', 'firefly',
+  'horizon', 'postcard', 'rain', 'terrace',
+] as const;
+
+export function generateUsername(rng: () => number = Math.random): string {
+  const pick = <T>(values: readonly T[]) => values[Math.min(values.length - 1, Math.floor(Math.max(0, rng()) * values.length))];
+  const suffix = String(Math.min(9999, Math.floor(Math.max(0, rng()) * 10_000))).padStart(4, '0');
+  return `${pick(USERNAME_ADJECTIVES)}-${pick(USERNAME_NOUNS)}-${suffix}`;
+}
+
 export function defaultUser(userId: string): UserItem {
   const now = new Date().toISOString();
   return {
@@ -154,9 +174,11 @@ export function defaultUser(userId: string): UserItem {
     SK: 'PROFILE',
     entityType: 'USER',
     userId,
+    username: '',
     display_name: '',
     birthdate: null,
     gender: null,
+    avatar_id: '01',
     spot_hint: '',
     lat: null,
     lng: null,
@@ -228,15 +250,18 @@ export function isAdultBirthdate(birthdate: string, now = new Date()): boolean {
 
 export function validateUser(item: UserItem): void {
   const genders: Gender[] = ['man', 'woman', 'nonbinary'];
+  const avatars: AvatarId[] = ['01', '02', '03', '04', '05', '06', '07', '08'];
   const intents: RelationshipIntent[] = ['long_term', 'open', 'figuring_out'];
   const energies: SocialEnergy[] = ['quiet', 'balanced', 'lively'];
   const styles: DateStyle[] = ['coffee', 'activity', 'sober', 'anything'];
   const validIso = (value: unknown) => typeof value === 'string' && Number.isFinite(Date.parse(value));
+  if (typeof item.username !== 'string' || (item.username !== '' && !/^[a-z][a-z0-9-]{5,31}$/.test(item.username))) throw new Error('invalid username');
   if (typeof item.display_name !== 'string') throw new Error('invalid display name');
   if (item.display_name.length > 50) throw new Error('display name is too long');
   if (item.birthdate !== null && typeof item.birthdate !== 'string') throw new Error('invalid birthdate');
   if (item.birthdate && !isAdultBirthdate(item.birthdate)) throw new Error('you must be 18 or older');
   if (item.gender !== null && !genders.includes(item.gender)) throw new Error('invalid gender');
+  if (!avatars.includes(item.avatar_id)) throw new Error('invalid avatar');
   if (typeof item.spot_hint !== 'string') throw new Error('invalid spot hint');
   if (item.spot_hint.length > 120) throw new Error('spot hint is too long');
   const coordinatePair = item.lat === null && item.lng === null
@@ -265,7 +290,8 @@ export function validateUser(item: UserItem): void {
   if (!Number.isInteger(item.budget_level) || item.budget_level < 1 || item.budget_level > 3) throw new Error('invalid budget');
   if (!Array.isArray(item.interest_ids) || new Set(item.interest_ids).size !== item.interest_ids.length || item.interest_ids.length > 5 || item.interest_ids.some((id) => !Number.isInteger(id) || !INTERESTS.some((interest) => interest.id === id))) throw new Error('invalid interests');
   if (item.onboarding_complete && (
-    !item.display_name.trim()
+    !item.username
+    || !item.display_name.trim()
     || !item.birthdate
     || !item.gender
     || item.spot_hint.trim().length < 8

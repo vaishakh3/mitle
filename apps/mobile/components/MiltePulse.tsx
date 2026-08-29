@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -17,28 +17,22 @@ export function MiltePulse({ size = 96 }: { size?: number }) {
   }, [phase]);
 
   const pulseStyle = useAnimatedStyle(() => ({
-    opacity: 0.28 + phase.value * 0.42,
-    transform: [{ scale: 0.92 + phase.value * 0.08 }],
+    opacity: 0.35 + phase.value * 0.65,
   }));
 
   return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <Animated.View style={[styles.frame, { width: size, height: size }, pulseStyle]} />
-      <Image
-        accessibilityIgnoresInvertColors
-        source={require('../assets/milte-symbol-reversed.png')}
-        resizeMode="contain"
-        style={{ width: size * 0.74, height: size * 0.74 }}
-      />
+    <View style={{ width: size, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={[styles.line, { width: size }]} />
+      <Animated.View style={[styles.dot, pulseStyle]} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  frame: {
+  line: {
     position: 'absolute',
-    borderWidth: 1,
-    borderColor: colors.rose,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.text,
+    height: 1,
   },
+  dot: { backgroundColor: colors.rose, borderRadius: 6, height: 12, width: 12 },
 });

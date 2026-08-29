@@ -1,1 +1,1 @@
-Milte now accepts the email code Cognito actually sends and keeps sign-in controls clear on narrow Android screens. Safe-area spacing, OTP entry, and first-run layout are fixed; the private daily dating experience and safety tools remain unchanged.
+Milte now has a clear “milte?” identity, a brighter interface, eight abstract avatars, and a unique anonymous username for every account. This update also brings a crisp new date reveal, original artwork, a proper birth-date calendar, more accessible controls, responsive layouts, and verified support for both Cognito code formats.

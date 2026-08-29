@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Milte question mark</title>
+  <desc id="desc">A lowercase m followed by a question mark: shall we meet?</desc>
+  <rect width="512" height="512" rx="104" fill="#2347D8"/>
+  <text x="256" y="338" fill="#FFFFFF" font-family="Archivo, Arial, sans-serif" font-size="250" font-weight="700" letter-spacing="-20" text-anchor="middle">m<tspan fill="#F0B83E">?</tspan></text>
+</svg>

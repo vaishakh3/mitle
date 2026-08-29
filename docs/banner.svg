@@ -1,11 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 420" role="img" aria-labelledby="title desc">
-  <title id="title">Milte</title>
-  <desc id="desc">Meet for real. One person, one public place, one hour.</desc>
-  <rect width="1400" height="420" fill="#0B0A0D"/>
-  <path fill="#F4EDE3" d="M82 48 208 130c-38 69-57 151-57 246s19 177 57 246L82 704V48Z"/>
-  <path fill="#F4EDE3" d="m1318-284-126 82c38 69 57 151 57 246s-19 177-57 246l126 82v-656Z"/>
-  <circle cx="700" cy="210" r="30" fill="#A73550"/>
-  <text x="700" y="176" text-anchor="middle" fill="#F4EDE3" font-family="'DM Sans', Arial, sans-serif" font-size="126" font-weight="700" letter-spacing="-7">milte</text>
-  <text x="700" y="290" text-anchor="middle" fill="#F4EDE3" font-family="'DM Sans', Arial, sans-serif" font-size="38" font-weight="500">meet for real<tspan fill="#D7A2AD">.</tspan></text>
-  <text x="700" y="355" text-anchor="middle" fill="#AAA19A" font-family="'DM Sans', Arial, sans-serif" font-size="16" font-weight="700" letter-spacing="4">ONE PERSON · ONE PLACE · ONE HOUR</text>
+  <title id="title">Milte?</title>
+  <desc id="desc">Meet for real. One private introduction, two honest yeses, one real hour.</desc>
+  <rect width="1400" height="420" fill="#F6F7F8"/>
+  <rect x="0" y="0" width="1400" height="15" fill="#161719"/>
+  <rect x="80" y="78" width="248" height="248" rx="54" fill="#2347D8"/>
+  <text x="204" y="258" fill="#FFFFFF" font-family="Archivo, Arial, sans-serif" font-size="192" font-weight="700" letter-spacing="-15" text-anchor="middle">m<tspan fill="#F0B83E">?</tspan></text>
+  <text x="402" y="174" fill="#161719" font-family="Archivo, Arial, sans-serif" font-size="122" font-weight="700" letter-spacing="-7">milte<tspan fill="#C73A2C">?</tspan></text>
+  <text x="408" y="239" fill="#2347D8" font-family="Archivo, Arial, sans-serif" font-size="42" font-weight="700">meet for real<tspan fill="#F0B83E">.</tspan></text>
+  <text x="408" y="309" fill="#373B40" font-family="'DM Sans', Arial, sans-serif" font-size="24">ONE PRIVATE INTRODUCTION · TWO HONEST YESES · ONE REAL HOUR</text>
+  <rect x="408" y="350" width="172" height="10" fill="#D43B2D"/>
+  <rect x="580" y="350" width="172" height="10" fill="#F0B83E"/>
+  <rect x="752" y="350" width="172" height="10" fill="#2347D8"/>
 </svg>

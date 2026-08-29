@@ -1,16 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, Switch, Text, View } from 'react-native';
+import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 import { AppHeader } from '../components/AppHeader';
+import { AvatarToken } from '../components/AvatarToken';
 import { Body, Button, Card, Chip, ChipRow, ChoiceCard, Divider, Field, Input, Label, PageScroll, Screen, Small, Subtitle, Title } from '../components/ui';
 import { deleteAccount, getMyInterestIds, getMyPreferences, getMyProfile, listInterests, setMyInterests, upsertPreferences, upsertProfile } from '../lib/api';
 import { signOut, useAuth } from '../lib/auth';
 import * as dialog from '../lib/dialog';
 import { refreshLocation } from '../lib/location';
+import { AVATARS, DEFAULT_AVATAR_ID } from '../lib/avatars';
 import { hourLabel, MEET_HOURS, WEEKDAYS } from '../lib/schedule';
 import { colors, fonts, radii, spacing } from '../lib/theme';
-import type { DateStyle, Gender, RelationshipIntent, SocialEnergy } from '../lib/types';
+import type { AvatarId, DateStyle, Gender, RelationshipIntent, SocialEnergy } from '../lib/types';
 
 const GENDERS: Array<{ value: Gender; label: string }> = [
   { value: 'woman', label: 'Women' },
@@ -46,6 +48,8 @@ function SettingsLink({ title, body, onPress }: { title: string; body: string; o
 }
 
 export default function Settings() {
+  const { width } = useWindowDimensions();
+  const isCompact = width < 360;
   const queryClient = useQueryClient();
   const { session } = useAuth();
   const profileQuery = useQuery({ queryKey: ['profile'], queryFn: getMyProfile });
@@ -54,6 +58,7 @@ export default function Settings() {
   const myInterestsQuery = useQuery({ queryKey: ['myInterests'], queryFn: getMyInterestIds });
   const [hint, setHint] = useState('');
   const [paused, setPaused] = useState(false);
+  const [avatarId, setAvatarId] = useState<AvatarId>(DEFAULT_AVATAR_ID);
   const [interestedIn, setInterestedIn] = useState<Gender[]>([]);
   const [radius, setRadius] = useState(10);
   const [ageMin, setAgeMin] = useState('21');
@@ -76,6 +81,7 @@ export default function Settings() {
       profileInitialized.current = true;
       setHint(profileQuery.data.spot_hint);
       setPaused(profileQuery.data.is_paused);
+      setAvatarId(profileQuery.data.avatar_id ?? DEFAULT_AVATAR_ID);
     }
   }, [profileQuery.data]);
   useEffect(() => {
@@ -102,7 +108,7 @@ export default function Settings() {
 
   const save = useMutation({
     mutationFn: async () => {
-      await upsertProfile({ spot_hint: hint.trim(), is_paused: paused });
+      await upsertProfile({ avatar_id: avatarId, spot_hint: hint.trim(), is_paused: paused });
       await upsertPreferences({
         interested_genders: interestedIn,
         radius_km: radius,
@@ -175,14 +181,44 @@ export default function Settings() {
             <Card tone={paused ? 'warm' : 'default'}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }}>
                 <View style={{ flex: 1, gap: 3 }}><Subtitle>{paused ? 'Matching is paused' : 'Matching is on'}</Subtitle><Small>{paused ? 'No new possibilities until you return.' : 'Only on the days you choose below.'}</Small></View>
-                <Switch accessibilityLabel="Pause matching" value={paused} onValueChange={setPaused} trackColor={{ true: colors.rose, false: colors.border }} thumbColor={colors.text} />
+                <Pressable
+                  accessibilityLabel="Matching active"
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: !paused }}
+                  onPress={() => setPaused((value) => !value)}
+                  style={{
+                    alignItems: paused ? 'flex-start' : 'flex-end',
+                    backgroundColor: paused ? colors.border : colors.text,
+                    borderRadius: radii.pill,
+                    justifyContent: 'center',
+                    paddingHorizontal: 3,
+                    width: 52,
+                    height: 30,
+                  }}
+                >
+                  <View style={{ backgroundColor: colors.surface, borderRadius: 12, height: 24, width: 24 }} />
+                </Pressable>
               </View>
             </Card>
+
+            <View style={{ gap: spacing.sm }}><Label>Your avatar & username</Label><Card style={{ gap: spacing.md }}>
+              <View style={{ alignItems: 'center', flexDirection: isCompact ? 'column' : 'row', gap: spacing.md }}>
+                <AvatarToken id={avatarId} size={72} />
+                <View style={{ alignItems: isCompact ? 'center' : 'stretch', flex: isCompact ? undefined : 1, gap: 3, width: isCompact ? '100%' : undefined }}>
+                  <Subtitle adjustsFontSizeToFit minimumFontScale={0.78} numberOfLines={1} style={{ textAlign: isCompact ? 'center' : 'left', width: '100%' }}>@{profileQuery.data?.username}</Subtitle>
+                  <Small style={{ textAlign: isCompact ? 'center' : 'left' }}>Random, unique, and intentionally not editable. Your avatar can change anytime.</Small>
+                </View>
+              </View>
+              <Divider />
+              <View accessibilityRole="radiogroup" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, justifyContent: 'center' }}>
+                {AVATARS.map((avatar) => <AvatarToken key={avatar.id} id={avatar.id} size={64} selected={avatarId === avatar.id} onPress={() => setAvatarId(avatar.id)} />)}
+              </View>
+            </Card></View>
 
             <View style={{ gap: spacing.sm }}><Label>Availability</Label><Card style={{ gap: spacing.lg }}>
               <Field label="Days that usually work">
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 6 }}>
-                  {WEEKDAYS.map((day) => <Pressable key={day.value} accessibilityRole="checkbox" accessibilityLabel={day.label} accessibilityState={{ checked: availableDays.includes(day.value) }} onPress={() => toggleDay(day.value)} style={{ flex: 1, height: 48, borderRadius: radii.md, borderWidth: 1, borderColor: availableDays.includes(day.value) ? colors.paper : colors.border, backgroundColor: availableDays.includes(day.value) ? colors.paper : colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: availableDays.includes(day.value) ? colors.ink : colors.textDim, fontFamily: fonts.sansBold }}>{day.short}</Text></Pressable>)}
+                  {WEEKDAYS.map((day) => <Pressable key={day.value} accessibilityRole="checkbox" accessibilityLabel={day.label} accessibilityState={{ checked: availableDays.includes(day.value) }} onPress={() => toggleDay(day.value)} style={{ flex: 1, height: 48, borderRadius: radii.sm, borderWidth: 1, borderColor: availableDays.includes(day.value) ? colors.text : colors.border, backgroundColor: availableDays.includes(day.value) ? colors.text : colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: availableDays.includes(day.value) ? colors.onAccent : colors.textDim, fontFamily: fonts.sansBold }}>{day.short}</Text></Pressable>)}
                 </View>
               </Field>
               <Field label="Best start time"><ChipRow>{MEET_HOURS.map((hour) => <Chip key={hour} label={hourLabel(hour)} selected={preferredHour === hour} onPress={() => setPreferredHour(hour)} />)}</ChipRow></Field>

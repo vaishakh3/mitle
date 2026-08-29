@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   runOnJS,
@@ -16,7 +16,6 @@ export function MeetingPoint({ onOpen }: { onOpen: () => void }) {
   const progress = useSharedValue(0);
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: 1 - progress.value,
-    transform: [{ scale: 1 - progress.value * 0.08 }],
   }));
 
   function open() {
@@ -38,35 +37,34 @@ export function MeetingPoint({ onOpen }: { onOpen: () => void }) {
         hitSlop={18}
         style={[styles.button, animatedStyle]}
       >
-        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.cornerTop} />
-        <Image
-          accessibilityIgnoresInvertColors
-          source={require('../assets/milte-symbol-reversed.png')}
-          resizeMode="contain"
-          style={styles.symbol}
-        />
-        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.cornerBottom} />
+        <View style={styles.copy}>
+          <Text style={styles.title}>Open today’s match</Text>
+          <Text style={styles.note}>Your answer stays private</Text>
+        </View>
+        <Text accessible={false} allowFontScaling={false} style={styles.symbol}>
+          m<Text style={styles.question}>?</Text>
+        </Text>
       </AnimatedPressable>
-      <Text style={styles.caption}>OPEN TODAY’S POSSIBILITY</Text>
-      <Text style={styles.subcaption}>your answer stays private</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { alignItems: 'center', gap: spacing.sm },
+  wrap: { alignItems: 'stretch', alignSelf: 'stretch' },
   button: {
-    width: 176,
-    height: 176,
+    minHeight: 84,
+    alignSelf: 'stretch',
     alignItems: 'center',
+    flexDirection: 'row',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderRadius: 8,
+    backgroundColor: colors.text,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
   },
-  symbol: { width: 120, height: 120 },
-  cornerTop: { position: 'absolute', top: -1, left: -1, width: 42, height: 4, backgroundColor: colors.rose },
-  cornerBottom: { position: 'absolute', right: -1, bottom: -1, width: 4, height: 42, backgroundColor: colors.amber },
-  caption: { color: colors.text, fontFamily: fonts.sansBold, fontSize: 11, letterSpacing: 1.8 },
-  subcaption: { color: colors.muted, fontFamily: fonts.sans, fontSize: 13 },
+  copy: { flex: 1, gap: 3 },
+  title: { color: colors.onAccent, fontFamily: fonts.serif, fontSize: 19, lineHeight: 24 },
+  note: { color: '#C9CED3', fontFamily: fonts.sans, fontSize: 13 },
+  symbol: { color: colors.onAccent, fontFamily: fonts.serifBold, fontSize: 31, lineHeight: 38, letterSpacing: -2 },
+  question: { color: colors.marigold, fontFamily: fonts.serifBold },
 });

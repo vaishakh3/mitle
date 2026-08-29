@@ -1,9 +1,8 @@
 import { DMSans_400Regular } from '@expo-google-fonts/dm-sans/400Regular';
 import { DMSans_500Medium } from '@expo-google-fonts/dm-sans/500Medium';
 import { DMSans_700Bold } from '@expo-google-fonts/dm-sans/700Bold';
-import { Fraunces_500Medium_Italic } from '@expo-google-fonts/fraunces/500Medium_Italic';
-import { Fraunces_600SemiBold } from '@expo-google-fonts/fraunces/600SemiBold';
-import { Fraunces_700Bold } from '@expo-google-fonts/fraunces/700Bold';
+import { Archivo_600SemiBold } from '@expo-google-fonts/archivo/600SemiBold';
+import { Archivo_700Bold } from '@expo-google-fonts/archivo/700Bold';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -21,9 +20,8 @@ const queryClient = new QueryClient();
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    Fraunces_600SemiBold,
-    Fraunces_700Bold,
-    Fraunces_500Medium_Italic,
+    Archivo_600SemiBold,
+    Archivo_700Bold,
     DMSans_400Regular,
     DMSans_500Medium,
     DMSans_700Bold,
@@ -35,7 +33,7 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) {
     return (
       <View accessibilityLabel="Milte is opening" style={styles.fontLoading}>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <Image
           accessibilityIgnoresInvertColors
           source={require('../assets/splash-icon.png')}
@@ -51,7 +49,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <AuthProvider>
           <ReducedMotionConfig mode={ReduceMotion.System} />
-          <StatusBar style="light" />
+          <StatusBar style="dark" />
           <Stack
             screenOptions={{
               headerShown: false,

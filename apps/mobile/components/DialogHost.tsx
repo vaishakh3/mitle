@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
 import * as dialog from '../lib/dialog';
 import { colors, radii, spacing } from '../lib/theme';
-import { Body, Button, Label, Title } from './ui';
+import { Body, Button, Title } from './ui';
 
 export function DialogHost() {
   const [request, setRequest] = useState<dialog.DialogRequest | null>(null);
@@ -23,7 +23,6 @@ export function DialogHost() {
     >
       <View style={styles.backdrop} accessibilityViewIsModal>
         <View style={styles.card}>
-          <Label style={{ color: colors.accentText }}>Milte</Label>
           <Title accessibilityRole="header">{request.title}</Title>
           {!!request.message && <Body>{request.message}</Body>}
           <View style={styles.actions}>
@@ -49,22 +48,20 @@ export function DialogHost() {
 const styles = StyleSheet.create({
   backdrop: {
     alignItems: 'center',
-    backgroundColor: 'rgba(9, 8, 13, 0.82)',
+    backgroundColor: 'rgba(27, 23, 25, 0.46)',
     flex: 1,
     justifyContent: 'center',
     padding: spacing.lg,
   },
   card: {
     backgroundColor: colors.surfaceRaised,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    borderWidth: 1,
+    borderRadius: radii.md,
     gap: spacing.md,
     maxWidth: 440,
     padding: spacing.lg,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 18 },
-    shadowOpacity: 0.45,
+    shadowOpacity: 0.16,
     shadowRadius: 36,
     width: '100%',
   },

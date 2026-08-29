@@ -45,6 +45,10 @@ const { handler } = await import('../src/handler.js');
 const USER_ID = '4ac84fe6-11c3-4e08-95ef-0f5d3e84c189';
 const MATCH_ID = 'af6b4c4b-b968-405d-ae7a-56004be196ab';
 
+function storedUser(id = USER_ID) {
+  return { ...defaultUser(id), username: 'quiet-lantern-4821' };
+}
+
 function apiEvent(path: string, method: string, body?: Record<string, unknown>, authenticated = true) {
   return {
     rawPath: path,
@@ -99,20 +103,58 @@ describe('AWS API routes', () => {
     expect(mocks.dbSend).not.toHaveBeenCalled();
   });
 
+  it('atomically assigns one unique anonymous username to a new account', async () => {
+    mocks.dbSend.mockResolvedValueOnce({}).mockResolvedValueOnce({});
+    const result = await handler(apiEvent('/me/profile', 'GET'));
+    expect(result).toMatchObject({ statusCode: 200 });
+    const profile = responseBody(result);
+    expect(profile.username).toMatch(/^[a-z]+-[a-z]+-\d{4}$/);
+
+    const transaction = mocks.dbSend.mock.calls[1][0];
+    expect(transaction.constructor.name).toBe('TransactWriteCommand');
+    expect(transaction.input.TransactItems[0].Put.Item).toMatchObject({ userId: USER_ID, username: profile.username });
+    expect(transaction.input.TransactItems[1].Put.Item).toMatchObject({
+      PK: `USERNAME#${profile.username}`,
+      SK: 'OWNER',
+      userId: USER_ID,
+    });
+  });
+
+  it('backfills a username for an existing account without changing its profile', async () => {
+    const legacy = defaultUser(USER_ID);
+    mocks.dbSend.mockResolvedValueOnce({ Item: legacy }).mockResolvedValueOnce({});
+    const result = await handler(apiEvent('/me/profile', 'GET'));
+    expect(result).toMatchObject({ statusCode: 200 });
+    const transaction = mocks.dbSend.mock.calls[1][0];
+    expect(transaction.constructor.name).toBe('TransactWriteCommand');
+    expect(transaction.input.TransactItems[1].Update).toMatchObject({
+      Key: { PK: `USER#${USER_ID}`, SK: 'PROFILE' },
+      UpdateExpression: 'SET username = :username',
+    });
+  });
+
   it('rejects unsupported and malformed profile fields', async () => {
-    mocks.dbSend.mockResolvedValue({ Item: defaultUser(USER_ID) });
+    mocks.dbSend.mockResolvedValue({ Item: storedUser() });
     const unsupported = await handler(apiEvent('/me/profile', 'PUT', { admin: true }));
     expect(unsupported).toMatchObject({ statusCode: 400 });
     expect(responseBody(unsupported).error).toContain('invalid field');
 
+    const username = await handler(apiEvent('/me/profile', 'PUT', { username: 'real-name' }));
+    expect(username).toMatchObject({ statusCode: 400 });
+    expect(responseBody(username).error).toContain('invalid field');
+
     const malformed = await handler(apiEvent('/me/profile', 'PUT', { display_name: 42 }));
     expect(malformed).toMatchObject({ statusCode: 400 });
     expect(responseBody(malformed).error).toBe('invalid display name');
+
+    const badAvatar = await handler(apiEvent('/me/profile', 'PUT', { avatar_id: 'selfie' }));
+    expect(badAvatar).toMatchObject({ statusCode: 400 });
+    expect(responseBody(badAvatar).error).toBe('invalid avatar');
   });
 
   it('uses an optimistic revision when saving profile changes', async () => {
-    mocks.dbSend.mockResolvedValueOnce({ Item: defaultUser(USER_ID) }).mockResolvedValueOnce({});
-    const result = await handler(apiEvent('/me/profile', 'PUT', { display_name: 'Mira' }));
+    mocks.dbSend.mockResolvedValueOnce({ Item: storedUser() }).mockResolvedValueOnce({});
+    const result = await handler(apiEvent('/me/profile', 'PUT', { display_name: 'Mira', avatar_id: '04' }));
     expect(result).toMatchObject({ statusCode: 200 });
     const put = mocks.dbSend.mock.calls[1][0];
     expect(put.constructor.name).toBe('PutCommand');
@@ -120,7 +162,7 @@ describe('AWS API routes', () => {
       ConditionExpression: 'attribute_not_exists(revision) OR revision = :expectedRevision',
       ExpressionAttributeValues: { ':expectedRevision': 0 },
     });
-    expect(put.input.Item).toMatchObject({ display_name: 'Mira', revision: 1 });
+    expect(put.input.Item).toMatchObject({ display_name: 'Mira', avatar_id: '04', revision: 1 });
   });
 
   it('accepts public support without requiring an account and returns a reference', async () => {
@@ -201,15 +243,19 @@ describe('AWS API routes', () => {
   });
 
   it('deletes user-owned records and the Cognito identity', async () => {
-    const profile = defaultUser(USER_ID);
+    const profile = storedUser();
     mocks.dbSend
-      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ Item: profile })
+      .mockResolvedValueOnce({ Item: null })
       .mockResolvedValueOnce({ Items: [profile] })
+      .mockResolvedValueOnce({})
       .mockResolvedValueOnce({});
     mocks.cognitoSend.mockResolvedValueOnce({});
     const result = await handler(apiEvent('/me', 'DELETE'));
     expect(result).toMatchObject({ statusCode: 204 });
     expect(mocks.cognitoSend).toHaveBeenCalledOnce();
     expect(mocks.cognitoSend.mock.calls[0][0].input).toMatchObject({ UserPoolId: 'test-pool', Username: USER_ID });
+    const deletes = mocks.dbSend.mock.calls.filter(([command]) => command.constructor.name === 'DeleteCommand');
+    expect(deletes.map(([command]) => command.input.Key)).toContainEqual({ PK: `USERNAME#${profile.username}`, SK: 'OWNER' });
   });
 });

@@ -21,7 +21,7 @@ describe('Play review release configuration', () => {
     const appConfig = JSON.parse(fs.readFileSync(path.join(repositoryRoot, 'apps/mobile/app.json'), 'utf8'));
     const authSource = fs.readFileSync(path.join(repositoryRoot, 'apps/mobile/lib/auth.tsx'), 'utf8');
 
-    expect(appConfig.expo.android.versionCode).toBe(6);
+    expect(appConfig.expo.android.versionCode).toBe(7);
     expect(appConfig.expo.extra.playReviewEmail).toBe('play-review@milte.app');
     expect(JSON.stringify(appConfig)).not.toMatch(/reviewPassword|playReviewPassword/i);
     expect(authSource).toContain("PREFERRED_CHALLENGE: 'PASSWORD'");
@@ -48,5 +48,20 @@ describe('location privacy', () => {
       lat: 9.931,
       lng: 76.267,
     });
+  });
+});
+
+describe('private member tokens', () => {
+  it('ships the complete six-token set as bundled assets', () => {
+    const ids = ['01', '02', '03', '04', '05', '06', '07', '08'];
+    for (const id of ids) {
+      const asset = fs.readFileSync(path.join(repositoryRoot, `apps/mobile/assets/avatar-${id}.png`));
+      expect(asset.readUInt32BE(16)).toBe(512);
+      expect(asset.readUInt32BE(20)).toBe(512);
+      expect(asset[25]).toBe(6); // PNG colour type 6: RGBA, not a baked background.
+    }
+
+    const avatarSource = fs.readFileSync(path.join(repositoryRoot, 'apps/mobile/lib/avatars.ts'), 'utf8');
+    expect(ids.every((id) => avatarSource.includes(`id: '${id}'`))).toBe(true);
   });
 });

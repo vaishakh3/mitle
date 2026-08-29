@@ -2,12 +2,15 @@ export type Gender = 'man' | 'woman' | 'nonbinary';
 export type RelationshipIntent = 'long_term' | 'open' | 'figuring_out';
 export type SocialEnergy = 'quiet' | 'balanced' | 'lively';
 export type DateStyle = 'coffee' | 'activity' | 'sober' | 'anything';
+export type AvatarId = '01' | '02' | '03' | '04' | '05' | '06' | '07' | '08';
 
 export interface Profile {
   user_id: string;
+  username: string;
   display_name: string;
   birthdate: string | null;
   gender: Gender | null;
+  avatar_id: AvatarId;
   spot_hint: string;
   lat: number | null;
   lng: number | null;

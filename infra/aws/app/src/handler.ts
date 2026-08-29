@@ -13,6 +13,7 @@ import { AdminDeleteUserCommand, CognitoIdentityProviderClient } from '@aws-sdk/
 import {
   INTERESTS,
   defaultUser,
+  generateUsername,
   matchTiming,
   meetingPhrase,
   nextEveningWindow,
@@ -102,18 +103,56 @@ async function getUser(id: string, create = true): Promise<UserItem | null> {
     TableName: TABLE_NAME,
     Key: { PK: `USER#${id}`, SK: 'PROFILE' },
   }));
-  if (result.Item) return { ...defaultUser(id), ...result.Item } as UserItem;
+  if (result.Item) {
+    const existing = { ...defaultUser(id), ...result.Item } as UserItem;
+    if (existing.username) return existing;
+    for (let attempt = 0; attempt < 16; attempt++) {
+      const username = generateUsername();
+      try {
+        await db.send(new TransactWriteCommand({ TransactItems: [
+          { Put: {
+            TableName: TABLE_NAME,
+            Item: { PK: `USERNAME#${username}`, SK: 'OWNER', entityType: 'USERNAME', username, userId: id, created_at: nowIso() },
+            ConditionExpression: 'attribute_not_exists(PK)',
+          } },
+          { Update: {
+            TableName: TABLE_NAME,
+            Key: { PK: `USER#${id}`, SK: 'PROFILE' },
+            UpdateExpression: 'SET username = :username',
+            ConditionExpression: 'attribute_exists(PK) AND (attribute_not_exists(username) OR username = :empty)',
+            ExpressionAttributeValues: { ':username': username, ':empty': '' },
+          } },
+        ] }));
+        return { ...existing, username };
+      } catch (error) {
+        if (!['ConditionalCheckFailedException', 'TransactionCanceledException'].includes((error as { name?: string }).name ?? '')) throw error;
+        const current = await db.send(new GetCommand({ TableName: TABLE_NAME, Key: { PK: `USER#${id}`, SK: 'PROFILE' } }));
+        if (typeof current.Item?.username === 'string' && current.Item.username) return { ...defaultUser(id), ...current.Item } as UserItem;
+      }
+    }
+    throw new Error('could not reserve an anonymous username');
+  }
   if (!create) return null;
-  const item = defaultUser(id);
-  await db.send(new PutCommand({
-    TableName: TABLE_NAME,
-    Item: item,
-    ConditionExpression: 'attribute_not_exists(PK)',
-  })).catch(() => undefined);
-  return (await db.send(new GetCommand({
-    TableName: TABLE_NAME,
-    Key: { PK: `USER#${id}`, SK: 'PROFILE' },
-  }))).Item as UserItem ?? item;
+  for (let attempt = 0; attempt < 16; attempt++) {
+    const username = generateUsername();
+    const item = { ...defaultUser(id), username };
+    try {
+      await db.send(new TransactWriteCommand({ TransactItems: [
+        { Put: { TableName: TABLE_NAME, Item: item, ConditionExpression: 'attribute_not_exists(PK)' } },
+        { Put: {
+          TableName: TABLE_NAME,
+          Item: { PK: `USERNAME#${username}`, SK: 'OWNER', entityType: 'USERNAME', username, userId: id, created_at: nowIso() },
+          ConditionExpression: 'attribute_not_exists(PK)',
+        } },
+      ] }));
+      return item;
+    } catch (error) {
+      if (!['ConditionalCheckFailedException', 'TransactionCanceledException'].includes((error as { name?: string }).name ?? '')) throw error;
+      const current = await db.send(new GetCommand({ TableName: TABLE_NAME, Key: { PK: `USER#${id}`, SK: 'PROFILE' } }));
+      if (current.Item) return getUser(id, false);
+    }
+  }
+  throw new Error('could not reserve an anonymous username');
 }
 
 async function saveUser(item: UserItem) {
@@ -148,9 +187,11 @@ async function pushUsers(users: Array<UserItem | null>, title: string, body: str
 function publicProfile(item: UserItem) {
   return {
     user_id: item.userId,
+    username: item.username,
     display_name: item.display_name,
     birthdate: item.birthdate,
     gender: item.gender,
+    avatar_id: item.avatar_id,
     spot_hint: item.spot_hint,
     lat: item.lat,
     lng: item.lng,
@@ -187,7 +228,7 @@ function publicPreferences(item: UserItem) {
 }
 
 const PROFILE_FIELDS = [
-  'display_name', 'birthdate', 'gender', 'spot_hint', 'lat', 'lng',
+  'display_name', 'birthdate', 'gender', 'avatar_id', 'spot_hint', 'lat', 'lng',
   'location_updated_at', 'expo_push_token', 'is_paused', 'onboarding_complete',
   'rules_acknowledged_at', 'terms_accepted_at', 'terms_version',
   'privacy_accepted_at', 'privacy_version', 'community_accepted_at',
@@ -558,6 +599,7 @@ async function dismissSecondChapter(id: string, body: Record<string, unknown>) {
 }
 
 async function deleteAccount(id: string) {
+  const profile = await getUser(id, false);
   const active = await activeMatchFor(id);
   if (active) await archiveMatch(active, 'declined');
   let cursor: Record<string, unknown> | undefined;
@@ -571,6 +613,7 @@ async function deleteAccount(id: string) {
     await Promise.all((result.Items ?? []).map((item) => db.send(new DeleteCommand({ TableName: TABLE_NAME, Key: { PK: item.PK, SK: item.SK } }))));
     cursor = result.LastEvaluatedKey;
   } while (cursor);
+  if (profile?.username) await db.send(new DeleteCommand({ TableName: TABLE_NAME, Key: { PK: `USERNAME#${profile.username}`, SK: 'OWNER' } }));
   await cognito.send(new AdminDeleteUserCommand({ UserPoolId: USER_POOL_ID, Username: id }));
 }
 

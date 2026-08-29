@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   Candidate,
   defaultUser,
+  generateUsername,
   isAdultBirthdate,
   meetingPhrase,
   matchTiming,
@@ -45,6 +46,8 @@ describe('AWS domain', () => {
   it('enforces adulthood and matching pool eligibility', () => {
     expect(isAdultBirthdate('2012-01-01', new Date('2026-08-19T00:00:00Z'))).toBe(false);
     const user = defaultUser('one');
+    expect(user.avatar_id).toBe('01');
+    expect(generateUsername(() => 0)).toBe('amber-comet-0000');
     expect(withPoolIndex(user).GSI1PK).toBeUndefined();
     expect(withPoolIndex({ ...user, onboarding_complete: true }).GSI1PK).toBeUndefined();
     const ready = withPoolIndex({
@@ -67,6 +70,7 @@ describe('AWS domain', () => {
     const acceptedAt = '2026-08-21T00:00:00.000Z';
     const user = {
       ...defaultUser('one'),
+      username: 'quiet-lantern-4821',
       display_name: 'Release',
       birthdate: '2001-08-21',
       gender: 'nonbinary' as const,
@@ -108,6 +112,7 @@ describe('AWS domain', () => {
     expect(() => validateUser({ ...user, display_name: 42 } as unknown as typeof user)).toThrow('invalid display name');
     expect(() => validateUser({ ...user, lat: 91, lng: 77 })).toThrow('invalid location coordinates');
     expect(() => validateUser({ ...user, interested_genders: ['unknown'] } as unknown as typeof user)).toThrow('invalid interested genders');
+    expect(() => validateUser({ ...user, avatar_id: 'selfie' } as unknown as typeof user)).toThrow('invalid avatar');
   });
 
   it('rejects impossible calendar dates', () => {

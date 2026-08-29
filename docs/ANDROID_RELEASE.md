@@ -3,7 +3,7 @@
 ## Release invariants
 
 - Application ID and deep-link scheme: `app.milte` / `milte://`
-- Version name and code: `1.0.0` / `6`
+- Version name and code: `1.0.0` / `7`
 - Minimum Android: API 24 (Android 7)
 - Compile and target SDK: API 36
 - Release ABIs: `arm64-v8a` and `x86_64`
@@ -40,8 +40,8 @@ The release script performs a clean Expo prebuild, injects release signing witho
 
 Final artifacts are named:
 
-- `release/milte-1.0.0-6.apk`
-- `release/milte-1.0.0-6.aab`
+- `release/milte-1.0.0-7.apk`
+- `release/milte-1.0.0-7.aab`
 
 ## Mandatory inspection
 
@@ -49,13 +49,13 @@ Final artifacts are named:
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
 export ANDROID_SDK_ROOT=/opt/homebrew/share/android-commandlinetools
 
-$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/apkanalyzer manifest application-id release/milte-1.0.0-6.apk
-$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/apkanalyzer manifest permissions release/milte-1.0.0-6.apk
-$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner verify --verbose --print-certs release/milte-1.0.0-6.apk
-jarsigner -verify -verbose -certs release/milte-1.0.0-6.aab
-$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign -c -P 16 -v 4 release/milte-1.0.0-6.apk
-shasum -a 256 -c release/milte-1.0.0-6.apk.sha256
-shasum -a 256 -c release/milte-1.0.0-6.aab.sha256
+$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/apkanalyzer manifest application-id release/milte-1.0.0-7.apk
+$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/apkanalyzer manifest permissions release/milte-1.0.0-7.apk
+$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner verify --verbose --print-certs release/milte-1.0.0-7.apk
+jarsigner -verify -verbose -certs release/milte-1.0.0-7.aab
+$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign -c -P 16 -v 4 release/milte-1.0.0-7.apk
+shasum -a 256 -c release/milte-1.0.0-7.apk.sha256
+shasum -a 256 -c release/milte-1.0.0-7.aab.sha256
 ```
 
 Reject a build containing the debug certificate, an active Metro/localhost endpoint, cleartext traffic, precise/background location, storage or overlay access, an unexpected ABI, a JavaScript source map, or a private credential. The AAB may contain the expected Play/R8 deobfuscation mapping.

@@ -1,12 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Image, Platform, Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInRight } from 'react-native-reanimated';
+import { AvatarToken } from '../components/AvatarToken';
 import {
   Body,
+  Brand,
   Button,
   Card,
   CheckRow,
@@ -15,23 +17,23 @@ import {
   ChoiceCard,
   Field,
   Input,
-  Label,
   Page,
   PageScroll,
-  Poetic,
   ProgressDots,
   Rule,
   Screen,
   Small,
+  Subtitle,
   Title,
 } from '../components/ui';
-import { listInterests, setMyInterests, upsertPreferences, upsertProfile } from '../lib/api';
+import { getMyProfile, listInterests, setMyInterests, upsertPreferences, upsertProfile } from '../lib/api';
 import * as dialog from '../lib/dialog';
 import { refreshLocation } from '../lib/location';
 import { LEGAL_VERSION } from '../lib/legal';
+import { AVATARS, DEFAULT_AVATAR_ID } from '../lib/avatars';
 import { hourLabel, MEET_HOURS, WEEKDAYS } from '../lib/schedule';
 import { colors, fonts, radii, spacing } from '../lib/theme';
-import type { DateStyle, Gender, RelationshipIntent, SocialEnergy } from '../lib/types';
+import type { AvatarId, DateStyle, Gender, RelationshipIntent, SocialEnergy } from '../lib/types';
 import { birthdateError } from '../lib/validation';
 
 function formatBirthdate(date: Date): string {
@@ -55,7 +57,7 @@ const GENDERS: Array<{ value: Gender; label: string }> = [
 ];
 const RADII_KM = [5, 10, 25, 50];
 const MAX_INTERESTS = 5;
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 8;
 const RELATIONSHIP_INTENTS: Array<{ value: RelationshipIntent; title: string; body: string }> = [
   { value: 'long_term', title: 'Something lasting', body: 'I am dating with a long-term relationship in mind.' },
   { value: 'open', title: 'Open, if it feels right', body: 'I care more about the person than naming the ending now.' },
@@ -75,12 +77,16 @@ const DATE_STYLES: Array<{ value: DateStyle; label: string }> = [
 
 export default function Onboarding() {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isCompact = width < 360;
+  const scrollRef = useRef<ScrollView>(null);
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
   const [name, setName] = useState('');
   const [birthdate, setBirthdate] = useState('');
   const [showBirthdatePicker, setShowBirthdatePicker] = useState(false);
   const [gender, setGender] = useState<Gender | null>(null);
+  const [avatarId, setAvatarId] = useState<AvatarId>(DEFAULT_AVATAR_ID);
   const [interestedIn, setInterestedIn] = useState<Gender[]>([]);
   const [ageMin, setAgeMin] = useState('21');
   const [ageMax, setAgeMax] = useState('35');
@@ -101,12 +107,17 @@ export default function Onboarding() {
   const [communityAccepted, setCommunityAccepted] = useState(false);
 
   const interestsQuery = useQuery({ queryKey: ['interests'], queryFn: listInterests });
+  const profileQuery = useQuery({ queryKey: ['profile'], queryFn: getMyProfile });
   const birthdayMessage = birthdate.length === 10 ? birthdateError(birthdate) : null;
   const birthdateValid = birthdate.length === 10 && !birthdayMessage;
   const agesValid = Number(ageMin) >= 18 && Number(ageMax) <= 99 && Number(ageMax) >= Number(ageMin);
   const latestBirthdate = dateYearsAgo(18);
   const earliestBirthdate = dateYearsAgo(99);
   const selectedBirthdate = birthdate ? new Date(`${birthdate}T12:00:00`) : dateYearsAgo(25);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [step]);
 
   function chooseBirthdate(event: DateTimePickerEvent, value?: Date) {
     if (Platform.OS === 'android') setShowBirthdatePicker(false);
@@ -124,7 +135,7 @@ export default function Onboarding() {
   async function shareLocation() {
     setLocating(true);
     try {
-      await upsertProfile({ display_name: name.trim(), birthdate, gender: gender!, spot_hint: hint.trim() });
+      await upsertProfile({ display_name: name.trim(), birthdate, gender: gender!, avatar_id: avatarId, spot_hint: hint.trim() });
       const ok = await refreshLocation();
       setLocated(ok);
       if (!ok) {
@@ -145,6 +156,7 @@ export default function Onboarding() {
         display_name: name.trim(),
         birthdate,
         gender: gender!,
+        avatar_id: avatarId,
         spot_hint: hint.trim(),
         rules_acknowledged_at: acceptedAt,
         terms_accepted_at: acceptedAt,
@@ -180,50 +192,72 @@ export default function Onboarding() {
   const screens = [
     <View style={{ gap: spacing.lg }}>
       <View style={{ gap: spacing.sm }}>
-        <Label style={{ color: colors.accentText }}>01 · The person behind the maybe</Label>
-        <Title>First, the private bits.</Title>
+        <Title>First, a few private details.</Title>
         <Body>Your match never sees your name, age, birthday, or gender. These are for eligibility and support only.</Body>
       </View>
       <Field label="First name">
         <Input accessibilityLabel="First name" placeholder="What do friends call you?" value={name} onChangeText={setName} maxLength={50} autoComplete="name" />
       </Field>
       <Field label="Date of birth" hint="You must be 18 or older.">
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Date of birth"
-          accessibilityHint="Opens a calendar"
-          accessibilityValue={{ text: birthdate || 'Not selected' }}
-          onPress={() => setShowBirthdatePicker(true)}
-          style={{
+        {Platform.OS === 'web' ? React.createElement('input', {
+          'aria-label': 'Date of birth',
+          type: 'date',
+          min: formatBirthdate(earliestBirthdate),
+          max: formatBirthdate(latestBirthdate),
+          value: birthdate,
+          onChange: (event: React.ChangeEvent<HTMLInputElement>) => setBirthdate(event.currentTarget.value),
+          style: {
             minHeight: 56,
-            backgroundColor: 'rgba(26,23,32,0.92)',
-            borderColor: colors.border,
-            borderWidth: 1,
+            background: colors.surface,
+            border: `1px solid ${colors.border}`,
             borderRadius: radii.sm,
-            paddingHorizontal: spacing.md,
-            paddingVertical: 15,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <Text style={{ color: birthdate ? colors.text : colors.faint, fontFamily: fonts.sans, fontSize: 16 }}>
-            {birthdate || 'Choose from calendar'}
-          </Text>
-          <Text importantForAccessibility="no" style={{ color: colors.accentText, fontFamily: fonts.sansBold, fontSize: 12, letterSpacing: 1.2 }}>CHOOSE</Text>
-        </Pressable>
-        {showBirthdatePicker && (
-          <View style={{ gap: spacing.sm }}>
-            <DateTimePicker
-              value={selectedBirthdate}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
-              minimumDate={earliestBirthdate}
-              maximumDate={latestBirthdate}
-              onChange={chooseBirthdate}
-            />
-            {Platform.OS === 'ios' && <Button title="Done" variant="quiet" onPress={() => setShowBirthdatePicker(false)} />}
-          </View>
+            boxSizing: 'border-box',
+            color: colors.text,
+            fontFamily: fonts.sans,
+            fontSize: 16,
+            padding: `15px ${spacing.md}px`,
+            width: '100%',
+          },
+        }) : (
+          <>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Date of birth"
+              accessibilityHint="Opens a calendar"
+              accessibilityValue={{ text: birthdate || 'Not selected' }}
+              onPress={() => setShowBirthdatePicker(true)}
+              style={{
+                minHeight: 56,
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                borderWidth: 1,
+                borderRadius: radii.sm,
+                paddingHorizontal: spacing.md,
+                paddingVertical: 15,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Text style={{ color: birthdate ? colors.text : colors.faint, fontFamily: fonts.sans, fontSize: 16 }}>
+                {birthdate || 'Choose from calendar'}
+              </Text>
+              <Text importantForAccessibility="no" style={{ color: colors.accentText, fontFamily: fonts.sansBold, fontSize: 14 }}>Choose date</Text>
+            </Pressable>
+            {showBirthdatePicker && (
+              <View style={{ gap: spacing.sm }}>
+                <DateTimePicker
+                  value={selectedBirthdate}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
+                  minimumDate={earliestBirthdate}
+                  maximumDate={latestBirthdate}
+                  onChange={chooseBirthdate}
+                />
+                {Platform.OS === 'ios' && <Button title="Done" variant="quiet" onPress={() => setShowBirthdatePicker(false)} />}
+              </View>
+            )}
+          </>
         )}
         {!!birthdayMessage && <Small style={{ color: colors.danger }}>{birthdayMessage}</Small>}
       </Field>
@@ -235,7 +269,27 @@ export default function Onboarding() {
 
     <View style={{ gap: spacing.lg }}>
       <View style={{ gap: spacing.sm }}>
-        <Label style={{ color: colors.accentText }}>02 · Your boundaries</Label>
+        <Title>Choose how Milte feels like yours.</Title>
+        <Body>We made you a random, unique username. It cannot be edited, so it cannot quietly become your real name.</Body>
+      </View>
+      <Card style={{ alignItems: 'center', backgroundColor: colors.blueWash, borderColor: '#CAD3FF', flexDirection: isCompact ? 'column' : 'row', gap: spacing.md }}>
+        <AvatarToken id={avatarId} size={86} />
+        <View style={{ alignItems: isCompact ? 'center' : 'stretch', flex: isCompact ? undefined : 1, gap: spacing.xs, width: isCompact ? '100%' : undefined }}>
+          <Subtitle adjustsFontSizeToFit minimumFontScale={0.78} numberOfLines={1} style={{ textAlign: isCompact ? 'center' : 'left', width: '100%' }}>@{profileQuery.data?.username ?? 'finding-your-name'}</Subtitle>
+          <Small style={{ textAlign: isCompact ? 'center' : 'left' }}>Your username stays with this account. Pick the avatar that feels most like you today.</Small>
+        </View>
+      </Card>
+      <View accessibilityRole="radiogroup" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, justifyContent: 'center' }}>
+        {AVATARS.map((avatar) => (
+          <AvatarToken key={avatar.id} id={avatar.id} size={72} selected={avatarId === avatar.id} onPress={() => setAvatarId(avatar.id)} />
+        ))}
+      </View>
+      <Small style={{ color: colors.textDim }}>Your avatar and username add character inside Milte. Your name, age, birthday, and gender still stay private.</Small>
+      <Button title="Use this avatar" onPress={() => setStep(2)} disabled={!profileQuery.data?.username} />
+    </View>,
+
+    <View style={{ gap: spacing.lg }}>
+      <View style={{ gap: spacing.sm }}>
         <Title>Who could this be?</Title>
         <Body>These are hard filters, not suggestions. A match is possible only when both people fit each other’s choices.</Body>
       </View>
@@ -253,20 +307,19 @@ export default function Onboarding() {
       <Field label="Maximum distance" hint="We use the smaller radius when two people differ.">
         <ChipRow>{RADII_KM.map((value) => <Chip key={value} label={`${value} km`} selected={radius === value} onPress={() => setRadius(value)} />)}</ChipRow>
       </Field>
-      <Button title="Continue" onPress={() => setStep(2)} disabled={!interestedIn.length || !agesValid} />
+      <Button title="Continue" onPress={() => setStep(3)} disabled={!interestedIn.length || !agesValid} />
     </View>,
 
     <View style={{ gap: spacing.lg }}>
       <View style={{ gap: spacing.sm }}>
-        <Label style={{ color: colors.accentText }}>03 · A date you can keep</Label>
         <Title>When are you actually free?</Title>
         <Body>We only put you in a draw when tomorrow works for you. Fewer maybes, fewer no-shows.</Body>
       </View>
       <Field label="Days I can usually meet">
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 6 }}>
           {WEEKDAYS.map((day) => (
-            <Pressable key={day.value} accessibilityRole="checkbox" accessibilityLabel={day.label} accessibilityState={{ checked: availableDays.includes(day.value) }} onPress={() => toggleDay(day.value)} style={{ flex: 1, height: 48, borderRadius: 16, borderWidth: 1, borderColor: availableDays.includes(day.value) ? colors.paper : colors.border, backgroundColor: availableDays.includes(day.value) ? colors.paper : colors.surface, alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ color: availableDays.includes(day.value) ? colors.ink : colors.textDim, fontFamily: fonts.sansBold }}>{day.short}</Text>
+            <Pressable key={day.value} accessibilityRole="checkbox" accessibilityLabel={day.label} accessibilityState={{ checked: availableDays.includes(day.value) }} onPress={() => toggleDay(day.value)} style={{ flex: 1, height: 48, borderRadius: radii.sm, borderWidth: 1, borderColor: availableDays.includes(day.value) ? colors.text : colors.border, backgroundColor: availableDays.includes(day.value) ? colors.text : colors.surface, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ color: availableDays.includes(day.value) ? colors.onAccent : colors.textDim, fontFamily: fonts.sansBold }}>{day.short}</Text>
             </Pressable>
           ))}
         </View>
@@ -274,15 +327,12 @@ export default function Onboarding() {
       <Field label="Best start time" hint="We choose the fairest hour between both preferences.">
         <ChipRow>{MEET_HOURS.map((hour) => <Chip key={hour} label={hourLabel(hour)} selected={preferredHour === hour} onPress={() => setPreferredHour(hour)} />)}</ChipRow>
       </Field>
-      <Card tone="outlined">
-        <Poetic style={{ color: colors.blush }}>“Spontaneous” works better with a little honesty first.</Poetic>
-      </Card>
-      <Button title="Continue" onPress={() => setStep(3)} disabled={!availableDays.length} />
+      <Small style={{ color: colors.textDim }}>A little honesty about your calendar makes the spontaneous part work.</Small>
+      <Button title="Continue" onPress={() => setStep(4)} disabled={!availableDays.length} />
     </View>,
 
     <View style={{ gap: spacing.lg }}>
       <View style={{ gap: spacing.sm }}>
-        <Label style={{ color: colors.accentText }}>04 · The shape of a good hour</Label>
         <Title>Private answers. Better surprises.</Title>
         <Body>These help us avoid obvious mismatches. They are never shown as a profile or used as a popularity score.</Body>
       </View>
@@ -302,12 +352,11 @@ export default function Onboarding() {
       <Field label="Comfortable spend" hint="We use the lower shared comfort when choosing a venue.">
         <ChipRow>{[1, 2, 3].map((value) => <Chip key={value} label={'₹'.repeat(value)} selected={budgetLevel === value} onPress={() => setBudgetLevel(value)} />)}</ChipRow>
       </Field>
-      <Button title="Continue" onPress={() => setStep(4)} />
+      <Button title="Continue" onPress={() => setStep(5)} />
     </View>,
 
     <View style={{ gap: spacing.lg }}>
       <View style={{ gap: spacing.sm }}>
-        <Label style={{ color: colors.accentText }}>05 · A nudge, not a résumé</Label>
         <Title>Things you genuinely like.</Title>
         <Body>Pick up to five. Shared interests nudge the match; chance still gets the final word.</Body>
       </View>
@@ -317,35 +366,37 @@ export default function Onboarding() {
         <ChipRow>{(interestsQuery.data ?? []).map((item) => <Chip key={item.id} label={item.label} selected={picked.includes(item.id)} onPress={() => toggleInterest(item.id)} />)}</ChipRow>
       )}
       <Small>{picked.length} of {MAX_INTERESTS} chosen</Small>
-      <Button title="Continue" onPress={() => setStep(5)} disabled={!picked.length} />
+      <Button title="Continue" onPress={() => setStep(6)} disabled={!picked.length} />
     </View>,
 
     <View style={{ gap: spacing.lg }}>
       <View style={{ gap: spacing.sm }}>
-        <Label style={{ color: colors.accentText }}>06 · The only clue</Label>
         <Title>How will they spot you?</Title>
         <Body>This appears only after you both say yes. Describe something visible that day—never your name, workplace, or contact details.</Body>
       </View>
-      <Card tone="warm">
-        <Poetic style={{ color: colors.blush }}>“Red scarf, probably reading a book.”</Poetic>
-      </Card>
       <Field label="My spot hint" hint={`${hint.trim().length}/120 characters`}>
-        <Input accessibilityLabel="Spot hint" placeholder="I’ll be the one in…" value={hint} onChangeText={setHint} multiline maxLength={120} style={{ minHeight: 100, textAlignVertical: 'top' }} />
+        <Input accessibilityLabel="Spot hint" placeholder="Red scarf, probably reading a book" value={hint} onChangeText={setHint} multiline maxLength={120} style={{ minHeight: 100, textAlignVertical: 'top' }} />
       </Field>
-      <Button title="Continue" onPress={() => setStep(6)} disabled={hint.trim().length < 8} />
+      <Button title="Continue" onPress={() => setStep(7)} disabled={hint.trim().length < 8} />
     </View>,
 
     <View style={{ gap: spacing.lg }}>
       <View style={{ gap: spacing.sm }}>
-        <Label style={{ color: colors.accentText }}>07 · Ready for the city</Label>
         <Title>Found, never exposed.</Title>
         <Body>Your location helps us choose someone nearby and a public venue between you. It is never shown to another member.</Body>
       </View>
-      <Card tone="outlined" style={{ gap: spacing.md }}>
+      <Image
+        accessibilityIgnoresInvertColors
+        accessibilityLabel="Two paths through the city meeting at one café table"
+        source={require('../assets/milte-crossed-paths.png')}
+        resizeMode="contain"
+        style={{ alignSelf: 'stretch', height: 180, width: '100%' }}
+      />
+      <View style={{ gap: spacing.lg }}>
         <Rule mark="A" title="Public places only" body="First meets are placed in named, populated public venues." />
         <Rule mark="B" title="Leave whenever you want" body="A yes is never an obligation to stay." />
         <Rule mark="C" title="Share the plan" body="Your ticket has a one-tap safety share." />
-      </Card>
+      </View>
       {located ? (
         <Card style={{ borderColor: colors.sage }}><Body style={{ color: colors.sage }}>✓ Location is ready. Your exact coordinates stay private.</Body></Card>
       ) : (
@@ -370,7 +421,7 @@ export default function Onboarding() {
       </CheckRow>
       <Button title="Read the Community Rules" variant="quiet" onPress={() => router.push('/community')} />
       <Button
-        title={located ? "Join tomorrow’s possibility" : "Finish setup — add location later"}
+        title={located ? "Finish and see Today" : "Finish setup — add location later"}
         onPress={finish}
         loading={busy}
         disabled={!rulesAccepted || !termsAccepted || !privacyAccepted || !communityAccepted}
@@ -382,14 +433,16 @@ export default function Onboarding() {
     <Screen>
       <Page style={{ paddingTop: Math.max(insets.top, spacing.md) + spacing.md, paddingBottom: spacing.md, gap: spacing.md }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Previous step" accessibilityState={{ disabled: step === 0 }} disabled={step === 0} onPress={() => setStep((value) => Math.max(0, value - 1))} hitSlop={12} style={{ minHeight: 48, justifyContent: 'center' }}>
-            <Text style={{ color: step === 0 ? colors.faint : colors.textDim, fontFamily: fonts.sansBold, fontSize: 12, letterSpacing: 1.5 }}>← BACK</Text>
-          </Pressable>
-          <Small>{step + 1} / {TOTAL_STEPS}</Small>
+          {step === 0 ? <Brand compact /> : (
+            <Pressable accessibilityRole="button" accessibilityLabel="Previous step" onPress={() => setStep((value) => Math.max(0, value - 1))} hitSlop={12} style={{ minHeight: 48, justifyContent: 'center' }}>
+              <Text style={{ color: colors.textDim, fontFamily: fonts.sansBold, fontSize: 15 }}>← Back</Text>
+            </Pressable>
+          )}
+          <Small>Step {step + 1} of {TOTAL_STEPS}</Small>
         </View>
         <ProgressDots total={TOTAL_STEPS} current={step} />
       </Page>
-      <PageScroll contentContainerStyle={{ paddingTop: spacing.md }}>
+      <PageScroll ref={scrollRef} contentContainerStyle={{ paddingTop: spacing.md }}>
         <Animated.View key={step} entering={FadeInRight.duration(320)}>
           {screens[step]}
         </Animated.View>

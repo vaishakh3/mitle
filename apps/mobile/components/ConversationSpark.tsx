@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { colors, spacing } from '../lib/theme';
-import { Button, Card, Label, Poetic, Small } from './ui';
+import { Button, Label, Poetic, Small } from './ui';
 
 const PROMPTS = [
   'What’s something you changed your mind about recently?',
@@ -17,13 +17,13 @@ const PROMPTS = [
 export function ConversationSpark() {
   const [index, setIndex] = useState(() => Math.floor(Math.random() * PROMPTS.length));
   return (
-    <Card tone="warm" style={{ gap: spacing.md }}>
+    <View style={{ borderBottomColor: colors.borderSoft, borderBottomWidth: 1, borderTopColor: colors.borderSoft, borderTopWidth: 1, gap: spacing.md, paddingVertical: spacing.lg }}>
       <View style={{ gap: spacing.sm }}>
         <Label style={{ color: colors.blush }}>If the silence needs a spark</Label>
         <Poetic style={{ color: colors.text, fontSize: 22, lineHeight: 31 }}>{PROMPTS[index]}</Poetic>
       </View>
       <Small>No games, no compatibility score—just a better question than “so, what do you do?”</Small>
       <Button title="Another question" variant="ghost" onPress={() => setIndex((value) => (value + 1) % PROMPTS.length)} />
-    </Card>
+    </View>
   );
 }

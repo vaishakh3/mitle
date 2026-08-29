@@ -28,10 +28,10 @@ Milte is designed to operate without café approvals, venue partnerships, third-
 
 - [x] Milte brand system, icons, feature graphic, listing, declarations, and release notes are complete.
 - [x] Product UI is responsive, keyboard-safe, reduced-motion aware, scrollable at large text, and uses shared accessible controls.
-- [x] Run the version-6 unit/type/browser matrix (75 root tests, 25 isolated backend tests, and six authentication E2E checks) and freeze dependency evidence.
+- [x] Run the version-7 unit/type/browser matrix (80 root tests, 27 isolated backend tests, six authentication journeys, and 13 responsive UI states) and freeze dependency evidence.
 - [x] Build the endpoint-bound signed APK/AAB; verify signature, package, SDKs, ABIs, permissions, 16 KB alignment, source maps, and secrets.
 - [x] Validate the final AAB with the SHA-256-verified official Google bundletool 1.18.3 JAR.
-- [x] Fresh-install the exact version-6 APK on API 24 and API 36, confirm safe-area behavior on both, and complete a real production eight-digit Cognito authentication into onboarding on the exact API 24 build. The broader onboarding/location/data/Today traversal remains covered by version 5 and unchanged code.
+- [x] Fresh-install and cold-launch the exact version-7 APK on API 24 and API 36, verify the production sign-in UI, package metadata, and zero crash-buffer entries. Earlier authenticated journeys and the current automated suites retain coverage of the unchanged Cognito/onboarding/location/data/Today path.
 - [ ] Complete a physical-device pass for TalkBack, notification delivery, allowed/denied location, Maps, calendar, sharing, emergency dialer, and the authenticated match/deletion loop.
 
 ## Play and go/no-go
@@ -42,6 +42,7 @@ Milte is designed to operate without café approvals, venue partnerships, third-
 - [x] Target Alpha closed testing to India, process version code 4, select the 25-address tester list, and send the complete release and app-setup changes to Play review.
 - [x] Process version code 5 in Play, confirm zero supported-device loss, and send the 100% Alpha closed-test sign-in-reliability release to Google review.
 - [x] Process version code 6 in Play, confirm API 24+/target 36 and zero supported-device loss, and send the 100% Alpha closed-test OTP/layout repair release to Google review.
+- [ ] Submit version code 7 from Play's verified **Ready to release** preview. Play has accepted the exact signed AAB, confirmed API 24+/target 36 and zero supported-device loss, and staged the 100% Alpha rollout; the external submission action awaits action-time confirmation.
 - [x] Publish the public support email and complete the IARC content-rating questionnaire and legal acceptance.
 - [ ] If required for the account type, complete the current closed-testing period with the required tester count.
 - [ ] Back up and recovery-test the JKS/password outside this workstation.

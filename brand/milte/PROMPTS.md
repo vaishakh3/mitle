@@ -2,6 +2,150 @@
 
 Generation mode: built-in ImageGen. Each numbered section was a separate generation call. Reference-image paths are recorded where used.
 
+> Prompts 01–11 document the retired bracket identity. Prompts 12–13 and 17 produced
+> the current editorial illustration system. Prompt 14 explored the final
+> typographic identity direction. The responsive logo itself was
+> redrawn as deterministic SVG rather than shipping generated logo pixels.
+
+## 14 — Typographic invitation exploration (selected direction)
+
+```text
+Create a professional logo exploration board for an Indian dating app brand
+named exactly “milte?” (the Hinglish phrase meaning “shall we meet?”). Show six
+distinct, highly refined typographic wordmark directions using the exact
+lowercase text “milte?” and, where appropriate, the exact tagline “meet for
+real.” Also show a responsive app-icon/16px favicon companion using “m?” only.
+
+Creative direction: warm, optimistic, contemporary, culturally fluent,
+confident, human, slightly editorial, designed by an excellent independent
+brand studio. Make the question mark the memorable brand gesture. Flat vector
+appearance, generous whitespace, strong optical balance, crisp silhouettes,
+and practical at Android app-icon and web-favicon sizes. Use ink, ultramarine,
+vermilion, marigold, and warm white. Avoid chairs, tables, cups, hearts,
+location pins, chat bubbles, infinity symbols, abstract brackets, gradients,
+gloss, 3D, shadows, mascots, cropped marks, and tiny details.
+```
+
+Built-in ImageGen source: `/Users/vaishakh/.codex/generated_images/01a01694-6c91-7980-8c67-24f560e4aa25/exec-0ff0f02f-d8d0-42c4-93be-8a84c1792a4b.png`.
+
+The exploration established the question mark as the memorable gesture. The
+shipping wordmark and `m?` icon were then drawn deterministically in Archivo so
+the text remains exact, scalable, reproducible, and legible at 16 px.
+
+## 15 — Meeting-ticket city frame (rejected)
+
+```text
+Create a portrait transparent editorial frame for Milte's mutual-date reveal.
+Two separate painted city paths—one ultramarine and one vermilion—enter from
+opposite lower edges and bend toward the same small public café in an Indian
+city. Surround the paths with a few cropped street details: gulmohar branches,
+a warm street lamp, balcony plants, a bicycle, and simple building fragments.
+Keep the centre deliberately quiet so black venue, date, and time typography
+will remain readable. Contemporary Indian screen-print / risograph, cut-paper
+geometry, imperfect ink texture, marigold highlights, ink black, off-white,
+genuinely transparent outer space. No people, faces, hearts, text, logo, pins,
+map labels, gradients, glow, shadows, photorealism, or UI mockup.
+```
+
+Built-in ImageGen source: `/Users/vaishakh/.codex/generated_images/01a01694-6c91-7980-8c67-24f560e4aa25/exec-2f7f1aa7-ef09-4b76-90b6-eeca7ad00d76.png`.
+
+Rejected because the full-card raster treatment looked blurry and competed with
+the venue details. The shipping ticket is a deterministic, crisp graphic layout.
+
+## 16 — Private object-token collection (rejected)
+
+Six separate calls used this shared prompt family, replacing `[OBJECT]` with
+red monsoon umbrella, blue city bicycle, marigold floral chai kettle, black
+hardback book with red ribbon, blue-and-marigold portable radio, and red vintage
+camera:
+
+```text
+Create one isolated collectible object token for Milte: [OBJECT]. The token is
+a private in-app marker, not a person, face, mascot, or profile picture. Draw
+only the single object, perfectly centred with generous safe space. Use the
+same tactile contemporary Indian screen-print / risograph language as Milte's
+editorial artwork: crisp readable silhouette, black ink outline, slightly
+imperfect registration and paper texture, ultramarine, vermilion, marigold,
+warm cream, and at most one small supporting colour. Genuine transparent
+background. No text, initials, face, person, heart, badge, circle container,
+drop shadow, glow, gradient, photorealism, 3D, or extra props. It must remain
+recognisable at 40 px.
+```
+
+Built-in ImageGen sources:
+
+- umbrella: `/Users/vaishakh/.codex/generated_images/01a01694-6c91-7980-8c67-24f560e4aa25/exec-93926b37-b209-4801-a7b3-1f9d65b9a8d7.png`
+- bicycle: `/Users/vaishakh/.codex/generated_images/01a01694-6c91-7980-8c67-24f560e4aa25/exec-c45e430e-a47c-4b24-997b-3a9c766762b6.png`
+- kettle: `/Users/vaishakh/.codex/generated_images/01a01694-6c91-7980-8c67-24f560e4aa25/exec-2d3fcb40-78a0-4372-88d1-5d45a39b0dbf.png`
+- book: `/Users/vaishakh/.codex/generated_images/01a01694-6c91-7980-8c67-24f560e4aa25/exec-1ce8975d-f150-4418-b6bd-0c4de8c8e834.png`
+- radio: `/Users/vaishakh/.codex/generated_images/01a01694-6c91-7980-8c67-24f560e4aa25/exec-aea30869-ea10-45e3-8779-d8f8b051125a.png`
+- camera: `/Users/vaishakh/.codex/generated_images/01a01694-6c91-7980-8c67-24f560e4aa25/exec-2573755f-36b5-4bda-860a-1c8bf4564927.png`
+
+Rejected because objects are navigation icons, not character avatars.
+
+## 17 — Soft geometric character avatars (selected)
+
+```text
+Design a polished set of exactly eight ORIGINAL HUMAN system avatars for Milte
+in a strict 4 columns × 2 rows sprite sheet. Think world-class modern mobile
+avatar design: simple soft 3D clay geometry, rounded head shapes, reduced facial
+features, clean dot/oval eyes, simple noses and mouths, matte materials,
+restrained friendly expressions, and extremely clear silhouettes at 40 px. Do
+not create portraits or realistic people. Do not use detailed skin texture,
+pores, eyelashes, makeup-ad beauty, glossy lips, individual hair strands,
+cinematic lighting, glamour, or photorealism. Each is a head-and-shoulders human
+character, mostly forward-facing, equal scale and spacing. Show meaningful
+variety in South Asian skin tones, face widths, nose shapes, jaw shapes,
+short/long/curly/coily/straight hair, one person with glasses, one with subtle
+facial hair, and gender-neutral options; keep everyone adult and tasteful.
+Clothing is minimal flat geometry in Milte ultramarine blue, vermilion red,
+marigold yellow, leaf green, warm white, and charcoal. Fully original; do not
+copy Apple Memoji or any existing avatar brand. Absolutely no animals, furry
+features, muzzles, fantasy ears, puppets, mascots, costumes, jewelry focus,
+objects, hearts, logos, text, username, frames, circles, tiles, shadows, colored
+halos, glow, gradient, or scenery. Render on one perfectly uniform pure
+chroma-key cyan background #00FFFF, edge to edge, with no lighting or color
+variation in the background and no cast shadows, so the background can be
+removed cleanly. Large equal gaps between all eight figures; no overlaps.
+```
+
+Built-in ImageGen exploration source:
+`/Users/vaishakh/.codex/generated_images/01a01694-6c91-7980-8c67-24f560e4aa25/exec-55e12f44-4349-4f72-bdb8-f4e624658fdc.png`.
+
+Selected alpha-clean master:
+`brand/milte/generated/11-avatar-soft-character-sheet-source.png`.
+`scripts/generate-avatar-assets.mjs` splits and normalises the eight 512 × 512
+RGBA shipping assets.
+
+## 12 — Table for two hero illustration (selected)
+
+```text
+Create a compact hero illustration for Milte: two mismatched café chairs angled
+toward one small round table, with two glasses of chai and a folded paper
+invitation. Show nobody; the empty chairs make the upcoming meeting feel
+possible. Use contemporary Indian editorial screen-print styling, bold
+cut-paper geometry, slightly imperfect ink registration, ultramarine blue,
+signal vermilion, marigold yellow, ink black, and genuinely transparent space.
+No text, logo, hearts, phones, dating cards, shadows, glow, gradients, beige
+canvas, corporate-Memphis vectors, 3D, pastel romance, or photorealism.
+```
+
+Shipping file: `apps/mobile/assets/milte-cafe-table.png`.
+
+## 13 — Crossed city paths spot illustration (selected)
+
+```text
+Create a small Milte empty-state illustration: two separate coloured walking
+paths approach the same tiny street-corner café table from different directions.
+Show abstract city blocks, one round table and two chairs; no people or labels.
+Use contemporary Indian screen-print / risograph, irregular paper-cut shapes,
+ultramarine, vermilion, marigold, ink black, off-white highlights, and genuinely
+transparent space. No text, logo, faces, hearts, phones, pins, arrows, shadows,
+glow, gradients, generic startup vectors, subway-map styling, or UI mockups.
+```
+
+Shipping file: `apps/mobile/assets/milte-crossed-paths.png`.
+
 ## 01 — Paths exploration (rejected)
 
 ```text

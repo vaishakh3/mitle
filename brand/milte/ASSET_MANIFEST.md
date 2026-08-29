@@ -1,6 +1,24 @@
 # Milte asset manifest
 
-## Production artwork
+> Retired identity archive. None of the assets listed here are current
+> production artwork. See `../milte-question.svg` and the generated files
+> in `apps/mobile/assets/` for the shipping identity.
+
+## Current production artwork
+
+| Asset | Source / export | Intended use |
+|---|---|---|
+| `../milte-question.svg` | Deterministic SVG | Master `milte?` / `m?` identity construction |
+| `apps/mobile/assets/icon.png` | `scripts/generate-brand-assets.mjs` | Android and store icon |
+| `apps/mobile/assets/favicon.png` | `scripts/generate-brand-assets.mjs` | Web favicon |
+| `apps/mobile/assets/milte-cafe-table.png` | Built-in ImageGen | Invitation hero |
+| `apps/mobile/assets/milte-crossed-paths.png` | Built-in ImageGen | Empty/location state |
+| `apps/mobile/assets/avatar-{01..08}.png` | ImageGen + deterministic split/export | Abstract member avatars |
+
+The avatar export recipe is `scripts/generate-avatar-assets.mjs`; generation
+sources and exact prompts are recorded in `PROMPTS.md`.
+
+## Archived artwork
 
 | Asset | Format | Intended use |
 |---|---|---|

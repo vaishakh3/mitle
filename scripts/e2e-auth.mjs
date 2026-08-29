@@ -106,13 +106,13 @@ try {
     await openSignIn(page);
     const email = 'new-tester@example.com';
     await page.getByLabel('Email address').fill(email);
-    await page.getByRole('button', { name: 'Send my private code' }).dblclick({ delay: 10 });
-    await page.getByText(`Enter the code we sent to ${email}.`).waitFor();
+    await page.getByRole('button', { name: 'Continue with email' }).dblclick({ delay: 10 });
+    await page.getByText(`We sent a 6- or 8-digit code to ${email}.`).waitFor();
     assert.equal(signupRequests, 1);
 
     await page.getByRole('button', { name: 'Use another email' }).click();
-    await page.getByRole('button', { name: 'Send my private code' }).click();
-    await page.getByText(`Enter the code we sent to ${email}.`).waitFor();
+    await page.getByRole('button', { name: 'Continue with email' }).click();
+    await page.getByText(`We sent a 6- or 8-digit code to ${email}.`).waitFor();
     assert.equal(signupRequests, 1, 'returning to the same address must reuse the live code');
   }));
 
@@ -149,8 +149,8 @@ try {
     }));
     await openSignIn(page);
     await page.getByLabel('Email address').fill(email);
-    await page.getByRole('button', { name: 'Send my private code' }).click();
-    const code = page.getByLabel('Email sign in code');
+    await page.getByRole('button', { name: 'Continue with email' }).click();
+    const code = page.getByLabel('Email verification code');
     await code.fill('87654321');
     assert.equal(await code.inputValue(), '87654321');
     assert.equal(await page.getByRole('button', { name: 'Enter Milte' }).isDisabled(), false);
@@ -166,7 +166,7 @@ try {
     });
     await openSignIn(page);
     await page.getByLabel('Email address').fill('narrow-tester@example.com');
-    await page.getByRole('button', { name: 'Send my private code' }).click();
+    await page.getByRole('button', { name: 'Continue with email' }).click();
     const actions = [
       page.getByRole('button', { name: /Resend in/ }),
       page.getByRole('button', { name: 'Use another email' }),
@@ -191,7 +191,7 @@ try {
     });
     await openSignIn(page);
     await page.getByLabel('Email address').fill('limited-tester@example.com');
-    await page.getByRole('button', { name: 'Send my private code' }).click();
+    await page.getByRole('button', { name: 'Continue with email' }).click();
     await page.getByText(/Your address is fine/).waitFor();
     await page.getByRole('button', { name: 'Got it' }).click();
     const retry = page.getByRole('button', { name: /Try again in 1 hour/ });
@@ -213,8 +213,8 @@ try {
     });
     await openSignIn(page);
     await page.getByLabel('Email address').fill('confirmation-tester@example.com');
-    await page.getByRole('button', { name: 'Send my private code' }).click();
-    const code = page.getByLabel('Email sign in code');
+    await page.getByRole('button', { name: 'Continue with email' }).click();
+    const code = page.getByLabel('Email verification code');
     await code.fill('123456');
     await page.getByRole('button', { name: 'Enter Milte' }).click();
     await page.getByText('One more code is on its way').waitFor();

@@ -23,7 +23,9 @@ describe('Milte identity contrast', () => {
     ['muted text', colors.muted, colors.bg],
     ['input placeholders', colors.faint, colors.surface],
     ['accent text', colors.accentText, colors.bg],
-    ['primary button label', colors.paper, colors.rose],
+    ['signal red on canvas', colors.rose, colors.bg],
+    ['white on signal red', colors.onAccent, colors.rose],
+    ['primary button label', colors.onAccent, colors.blue],
     ['danger text', colors.danger, colors.bg],
     ['paper secondary text', colors.inkSoft, colors.paper],
   ])('%s is at least WCAG AA for normal text', (_label, foreground, background) => {

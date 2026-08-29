@@ -2,7 +2,7 @@
 
 This is the single source of truth for machine readiness. A box is checked only when repository or live-system evidence proves it. Human approvals remain explicit and do not hide unfinished engineering.
 
-Last audited: 2026-08-24 (Asia/Kolkata)
+Last audited: 2026-08-29 (Asia/Kolkata)
 
 ## Completion rule
 
@@ -56,7 +56,7 @@ Milte is machine-ready when every non-human item below is checked, the verificat
 
 ## Android and Play package
 
-- [x] Final package/scheme is `app.milte` / `milte://`; version is `1.0.0` (6); min/target SDKs are 24/36.
+- [x] Final package/scheme is `app.milte` / `milte://`; version is `1.0.0` (7); min/target SDKs are 24/36.
 - [x] Continuous Native Generation, local release signing, R8/resource shrinking, disabled backup/cleartext, and `arm64-v8a`/`x86_64` are configured.
 - [x] The RSA-4096 Milte upload key is outside Git and its certificate fingerprint is recorded.
 - [x] A clean signing preflight produced an installable Milte APK/AAB and passed package, signature, ABI, permission, and 16 KB alignment inspection.
@@ -68,17 +68,19 @@ Milte is machine-ready when every non-human item below is checked, the verificat
 - [x] Upload and process version code 4, replace the Alpha release with the frozen AAB, and submit the consolidated listing, declarations, India targeting, tester list, and release changes to Play review.
 - [x] Upload version code 5 with the first-run authentication reliability fix, pass Play bundle/device validation, and submit the 100% Alpha closed-test rollout to Google review.
 - [x] Upload version code 6 with the Cognito eight-digit-code and narrow-screen sign-in fixes, confirm zero supported-device loss, and submit the 100% Alpha closed-test rollout to Google review.
+- [x] Build version code 7 with the light Milte identity, anonymous immutable usernames, eight character avatars, corrected avatar cropping/selection overlays, symmetric header geometry, compact-width layouts, and the final responsive visual audit.
+- [ ] Save and submit the Play-accepted version code 7 bundle as a 100% Alpha closed-test rollout. The exact AAB, notes, device-compatibility preview, and release form are prepared; the final representational submission is awaiting action-time confirmation.
 - [x] Rebuild APK/AAB after the Milte AWS endpoint cutover and freeze final sizes, hashes, signature, permission/ABI/alignment checks, secret scan, and source-map inspection.
 - [x] Complete trusted bundletool validation with the SHA-256-verified official Google 1.18.3 release.
-- [x] Install and cold-launch the exact version 6 APK on API 24 and API 36, verify safe-area and narrow-screen behavior, and complete a real production eight-digit Cognito authentication into onboarding on API 24. The unchanged broader onboarding/location/data/Today traversal remains covered by version 5.
+- [x] Install and cold-launch the exact version 7 APK on API 24 and API 36, verify the production sign-in UI, package metadata, and zero crash-buffer entries. The broader authenticated onboarding/location/data/Today traversal remains covered by earlier release evidence and the current automated suites.
 
 ## Verification matrix
 
-- [x] Final `npm run release:verify` (75 root tests, 25 isolated backend tests, and six authentication browser checks pass for version 6).
+- [x] Final `npm run release:verify` (80 root tests, 27 isolated backend tests, six authentication browser journeys, and 13 responsive UI states pass for version 7).
 - [x] Final dependency audit and bounded waiver review: root/Lambda report zero; mobile reports 12 moderate and zero high/critical iOS/config build-tool advisories documented in `DEPENDENCY_RISK.md`. Official bundletool is checksum-pinned outside the repository.
 - [x] Final APK `apksigner`, `apkanalyzer`, `zipalign -P 16`, ABI/ELF, source-map, and secret inspection
 - [x] Final AAB `jarsigner` and checksum-pinned official bundletool validation
-- [x] Final API 24/API 36 exact-v6 emulator install matrix plus real API 24 eight-digit Cognito authentication; exact-v5 API 36 retains the unchanged full onboarding/data journey evidence
+- [x] Final API 24/API 36 exact-v7 emulator install/cold-launch matrix with zero crash-buffer entries; prior authenticated journeys and the expanded current browser suites cover the unchanged data flow
 - [x] Live Milte AWS and CloudFront verification
 - [x] Repository/package secret scan and `git diff --check`
 

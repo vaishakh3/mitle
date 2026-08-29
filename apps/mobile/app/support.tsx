@@ -41,7 +41,6 @@ export default function Support() {
       <AppHeader back title="Support" />
       <PageScroll style={{ flex: 1 }} contentContainerStyle={{ paddingTop: spacing.sm, gap: spacing.lg }}>
         <View style={{ gap: spacing.sm }}>
-          <Label style={{ color: colors.accentText }}>A first-party, confidential channel</Label>
           <Title>Tell Milte what you need.</Title>
           <Body>Requests are stored privately in Milte’s AWS account for an authorised operator. Do not use this form for emergencies.</Body>
         </View>

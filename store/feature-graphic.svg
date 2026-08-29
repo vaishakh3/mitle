@@ -1,11 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 500" role="img" aria-labelledby="title desc">
-  <title id="title">Milte Google Play feature graphic</title>
-  <desc id="desc">Milte logo and meet-for-real promise using the meeting-point identity.</desc>
-  <rect width="1024" height="500" fill="#F4EDE3"/>
-  <path fill="#0B0A0D" d="M-42-12 202 146c-73 134-110 293-110 476S129 964 202 1098L-42 1256V-12Z"/>
-  <path fill="#0B0A0D" d="m1066-12-244 158c73 134 110 293 110 476s-37 342-110 476l244 158V-12Z"/>
-  <circle cx="512" cy="250" r="42" fill="#A73550"/>
-  <text x="512" y="203" text-anchor="middle" fill="#0B0A0D" font-family="'DM Sans', Arial, sans-serif" font-size="118" font-weight="700" letter-spacing="-6">milte</text>
-  <text x="512" y="326" text-anchor="middle" fill="#0B0A0D" font-family="'DM Sans', Arial, sans-serif" font-size="42" font-weight="500" letter-spacing="-1">meet for real<tspan fill="#A73550">.</tspan></text>
-  <text x="512" y="404" text-anchor="middle" fill="#5D5559" font-family="'DM Sans', Arial, sans-serif" font-size="18" font-weight="700" letter-spacing="4">ONE PERSON · ONE PLACE · ONE HOUR</text>
+  <title id="title">Milte? — meet for real</title>
+  <desc id="desc">Milte is a different kind of dating app: one private introduction, two honest yeses, and one real date.</desc>
+  <rect width="1024" height="500" fill="#F6F7F8"/>
+  <rect width="18" height="500" fill="#D43B2D"/>
+  <rect x="18" width="18" height="500" fill="#F0B83E"/>
+  <rect x="36" width="18" height="500" fill="#2347D8"/>
+  <text x="108" y="112" fill="#161719" font-family="ArchivoLocal, Archivo, Arial, sans-serif" font-size="72" font-weight="700" letter-spacing="-4">milte<tspan fill="#C73A2C">?</tspan></text>
+  <text x="110" y="154" fill="#373B40" font-family="DMSansLocal, 'DM Sans', Arial, sans-serif" font-size="24" font-weight="500">meet for real<tspan fill="#F0B83E">.</tspan></text>
+  <text x="108" y="268" fill="#161719" font-family="ArchivoLocal, Archivo, Arial, sans-serif" font-size="51" font-weight="700" letter-spacing="-2">ONE REAL DATE.</text>
+  <text x="110" y="316" fill="#2347D8" font-family="ArchivoLocal, Archivo, Arial, sans-serif" font-size="35" font-weight="700">NO SWIPING THEATRE.</text>
+  <text x="110" y="386" fill="#373B40" font-family="DMSansLocal, 'DM Sans', Arial, sans-serif" font-size="20">One private introduction. Two honest yeses.</text>
+  <text x="110" y="420" fill="#373B40" font-family="DMSansLocal, 'DM Sans', Arial, sans-serif" font-size="20">One hour together in a public place.</text>
+  <rect x="704" y="79" width="258" height="258" rx="58" fill="#2347D8"/>
+  <text x="833" y="270" fill="#FFFFFF" font-family="ArchivoLocal, Archivo, Arial, sans-serif" font-size="185" font-weight="700" letter-spacing="-14" text-anchor="middle">m<tspan fill="#F0B83E">?</tspan></text>
+  <circle cx="708" cy="366" r="18" fill="#D43B2D"/>
+  <circle cx="758" cy="366" r="18" fill="#F0B83E"/>
+  <circle cx="808" cy="366" r="18" fill="#2347D8"/>
 </svg>

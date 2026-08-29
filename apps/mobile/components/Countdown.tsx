@@ -17,7 +17,7 @@ function parts(ms: number): { value: string; caption: string } {
 interface CountdownProps {
   until: string;
   label?: string;
-  tone?: 'rose' | 'amber' | 'paper';
+  tone?: 'rose' | 'amber' | 'paper' | 'inverse';
   size?: number;
   onDone?: () => void;
 }
@@ -42,7 +42,7 @@ export function Countdown({ until, label, tone = 'rose', size = 44, onDone }: Co
     if (done) onDoneRef.current?.();
   }, [done]);
 
-  const color = tone === 'amber' ? colors.amber : tone === 'paper' ? colors.ink : colors.rose;
+  const color = tone === 'amber' ? colors.amber : tone === 'paper' ? colors.ink : tone === 'inverse' ? colors.onAccent : colors.rose;
   const { value, caption } = parts(remaining);
 
   return (
@@ -67,7 +67,7 @@ export function Countdown({ until, label, tone = 'rose', size = 44, onDone }: Co
       {!!label && (
         <Text
           style={{
-            color: tone === 'paper' ? colors.inkSoft : colors.muted,
+            color: tone === 'paper' ? colors.inkSoft : tone === 'inverse' ? '#C9CED3' : colors.muted,
             fontSize: 11,
             fontFamily: fonts.sansBold,
             letterSpacing: 2,
